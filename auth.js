@@ -1,557 +1,456 @@
-/* =========================================================
-   CESS — Authentication System
-   =========================================================
-   Handles:
-   - Register
-   - Login
-   - Logout
-   - Password reset
-   - User profile
-   - Role-based redirect
-   ========================================================= */
+(function () {
+  "use strict";
 
+  /* =========================================================
+     CESS — AUTHENTICATION SYSTEM
+     ========================================================= */
 
-/* =========================================================
-   GET CURRENT USER PROFILE
-   ========================================================= */
+  function getUserProfile(uid) {
+    return db
+      .collection(CESS_CONFIG.collections.USERS)
+      .doc(uid)
+      .get();
+  }
 
-async function getCurrentUserProfile() {
-
+  async function getCurrentUserProfile() {
     const user = auth.currentUser;
 
     if (!user) {
-        return null;
+      return null;
     }
 
-    try {
+    const doc = await getUserProfile(user.uid);
 
-        const doc = await db
-            .collection(CESS_CONFIG.collections.USERS)
-            .doc(user.uid)
-            .get();
-
-        if (!doc.exists) {
-            return null;
-        }
-
-        return {
-            uid: user.uid,
-            ...doc.data()
-        };
-
-    } catch (error) {
-
-        console.error(
-            "CESS: Failed to load user profile",
-            error
-        );
-
-        throw error;
+    if (!doc.exists) {
+      return null;
     }
-}
+
+    return {
+      uid: user.uid,
+      ...doc.data()
+    };
+  }
 
 
-/* =========================================================
-   REDIRECT USER ACCORDING TO ROLE
-   ========================================================= */
+  /* =========================================================
+     ROLE REDIRECTION
+     ========================================================= */
 
-function redirectToRoleHome(role) {
-
-    console.log(
-        "CESS: Redirecting according to role:",
-        role
-    );
-
+  function redirectToRoleHome(role) {
 
     if (role === CESS_CONFIG.roles.ADMIN) {
-
-        window.location.replace("admin.html");
-
-        return;
+      window.location.replace("admin.html");
+      return;
     }
-
 
     if (role === CESS_CONFIG.roles.LEADERSHIP) {
-
-        window.location.replace("leadership.html");
-
-        return;
+      window.location.replace("leadership.html");
+      return;
     }
-
 
     if (role === CESS_CONFIG.roles.MEMBER) {
-
-        window.location.replace("member.html");
-
-        return;
+      window.location.replace("member.html");
+      return;
     }
 
-
-    console.error(
-        "CESS: Unknown or missing role:",
-        role
-    );
-
     window.location.replace("index.html");
-}
+  }
 
 
-/* =========================================================
-   LOGIN
-   ========================================================= */
+  /* =========================================================
+     LOGIN
+     ========================================================= */
 
-async function loginUser(email, password) {
+  async function loginUser(email, password) {
 
-    email = email.trim();
+    email = String(email || "").trim();
 
     if (!email) {
-        throw new Error("Please enter your email.");
+      throw new Error("Please enter your email address.");
     }
 
     if (!password) {
-        throw new Error("Please enter your password.");
+      throw new Error("Please enter your password.");
     }
 
-
-    console.log(
-        "CESS: Starting login..."
-    );
-
-
-    /* -----------------------------------------------------
-       Firebase Authentication
-       ----------------------------------------------------- */
+    console.log("CESS AUTH: Signing in...");
 
     const credential =
-        await auth.signInWithEmailAndPassword(
-            email,
-            password
-        );
-
+      await auth.signInWithEmailAndPassword(
+        email,
+        password
+      );
 
     const user = credential.user;
 
-
     console.log(
-        "CESS: Firebase login successful.",
-        user.uid
+      "CESS AUTH: Firebase login successful:",
+      user.uid
     );
 
+    const doc = await getUserProfile(user.uid);
 
-    /* -----------------------------------------------------
-       Wait until Firebase confirms the current user
-       ----------------------------------------------------- */
+    if (!doc.exists) {
 
-    await auth.currentUser.reload();
+      /*
+       * Firebase account exists,
+       * but there is no CESS profile.
+       */
 
+      await auth.signOut();
 
-    /* -----------------------------------------------------
-       Get CESS profile
-       ----------------------------------------------------- */
-
-    const profile =
-        await getCurrentUserProfile();
-
-
-    if (!profile) {
-
-        /*
-         * The Firebase account exists,
-         * but there is no CESS profile.
-         */
-
-        console.error(
-            "CESS: Authentication succeeded but user profile does not exist."
-        );
-
-        throw new Error(
-            "Your Firebase account exists, but your CESS profile was not found."
-        );
+      throw new Error(
+        "Your account exists, but your CESS profile was not found."
+      );
     }
 
+    const profile = {
+      uid: user.uid,
+      ...doc.data()
+    };
 
     if (!profile.role) {
 
-        console.error(
-            "CESS: User has no role.",
-            profile
-        );
+      await auth.signOut();
 
-        throw new Error(
-            "Your CESS account has no assigned role."
-        );
+      throw new Error(
+        "Your CESS account does not have a role assigned."
+      );
     }
 
-
     console.log(
-        "CESS: User profile loaded:",
-        profile
+      "CESS AUTH: Role:",
+      profile.role
     );
-
-
-    /* -----------------------------------------------------
-       Redirect
-       ----------------------------------------------------- */
 
     redirectToRoleHome(profile.role);
 
-
     return profile;
-}
+  }
 
 
-/* =========================================================
-   REGISTER
-   ========================================================= */
+  /* =========================================================
+     REGISTER
+     ========================================================= */
 
-async function registerUser({
+  async function registerUser({
     fullName,
     email,
     password,
     batch
-}) {
+  }) {
 
-    fullName = fullName.trim();
-    email = email.trim();
-    batch = batch.trim();
-
+    fullName = String(fullName || "").trim();
+    email = String(email || "").trim();
+    batch = String(batch || "").trim();
 
     if (!fullName) {
-        throw new Error("Please enter your full name.");
+      throw new Error("Please enter your full name.");
     }
-
 
     if (!email) {
-        throw new Error("Please enter your email.");
+      throw new Error("Please enter your email address.");
     }
-
 
     if (!password) {
-        throw new Error("Please enter a password.");
+      throw new Error("Please enter a password.");
     }
-
 
     if (password.length < 6) {
-
-        throw new Error(
-            "Password must contain at least 6 characters."
-        );
+      throw new Error(
+        "Password must contain at least 6 characters."
+      );
     }
 
-
-    console.log(
-        "CESS: Creating Firebase account..."
-    );
-
-
-    /* -----------------------------------------------------
-       Create Firebase Authentication account
-       ----------------------------------------------------- */
+    console.log("CESS AUTH: Creating account...");
 
     const credential =
-        await auth.createUserWithEmailAndPassword(
-            email,
-            password
-        );
-
+      await auth.createUserWithEmailAndPassword(
+        email,
+        password
+      );
 
     const user = credential.user;
 
-
     console.log(
-        "CESS: Firebase account created:",
-        user.uid
+      "CESS AUTH: Firebase account created:",
+      user.uid
     );
 
+    try {
 
-    /* -----------------------------------------------------
-       Create CESS user profile
-       ----------------------------------------------------- */
-
-    await db
+      await db
         .collection(CESS_CONFIG.collections.USERS)
         .doc(user.uid)
         .set({
 
-            name: fullName,
+          name: fullName,
 
-            email: user.email,
+          email: user.email,
 
-            batch: batch,
+          batch: batch,
 
-            role: CESS_CONFIG.roles.MEMBER,
+          role: CESS_CONFIG.roles.MEMBER,
 
-            createdAt:
-                firebase.firestore.FieldValue
-                    .serverTimestamp()
+          createdAt:
+            firebase.firestore.FieldValue
+              .serverTimestamp()
 
         });
 
+    } catch (firestoreError) {
 
-    console.log(
-        "CESS: User profile created."
-    );
+      /*
+       * If the Firebase account was created but
+       * the CESS profile failed, remove the Auth account
+       * so registration does not leave a broken account.
+       */
 
+      console.error(
+        "CESS AUTH: Failed to create profile:",
+        firestoreError
+      );
 
-    /* -----------------------------------------------------
-       Get the profile we just created
-       ----------------------------------------------------- */
-
-    const profile =
-        await getCurrentUserProfile();
-
-
-    if (!profile) {
-
-        throw new Error(
-            "Account was created, but the CESS profile could not be loaded."
+      try {
+        await user.delete();
+      } catch (deleteError) {
+        console.error(
+          "CESS AUTH: Failed to rollback account:",
+          deleteError
         );
+      }
+
+      throw firestoreError;
     }
 
+    console.log(
+      "CESS AUTH: CESS profile created."
+    );
 
-    /* -----------------------------------------------------
-       New users are members by default
-       ----------------------------------------------------- */
+    /*
+     * New registrations are members by default.
+     */
 
     redirectToRoleHome(
-        CESS_CONFIG.roles.MEMBER
+      CESS_CONFIG.roles.MEMBER
     );
 
+    return {
+      uid: user.uid,
+      name: fullName,
+      email: user.email,
+      batch: batch,
+      role: CESS_CONFIG.roles.MEMBER
+    };
+  }
 
-    return profile;
-}
 
+  /* =========================================================
+     LOGOUT
+     ========================================================= */
 
-/* =========================================================
-   LOGOUT
-   ========================================================= */
+  async function logoutUser() {
 
-async function logoutUser() {
-
-    console.log(
-        "CESS: Logging out..."
-    );
-
+    console.log("CESS AUTH: Signing out...");
 
     await auth.signOut();
 
-
-    console.log(
-        "CESS: Logout successful."
-    );
+    window.location.replace("index.html");
+  }
 
 
-    window.location.replace(
-        "index.html"
-    );
-}
+  /* =========================================================
+     PASSWORD RESET
+     ========================================================= */
 
+  async function sendPasswordReset(email) {
 
-/* =========================================================
-   PASSWORD RESET
-   ========================================================= */
-
-async function sendPasswordReset(email) {
-
-    email = email.trim();
-
+    email = String(email || "").trim();
 
     if (!email) {
-
-        throw new Error(
-            "Please enter your email address first."
-        );
+      throw new Error(
+        "Please enter your email address first."
+      );
     }
 
+    await auth.sendPasswordResetEmail(email);
 
-    await auth.sendPasswordResetEmail(
-        email
-    );
-
-
-    console.log(
-        "CESS: Password reset email sent."
-    );
-}
+    return true;
+  }
 
 
-/* =========================================================
-   PAGE GUARD
-   ========================================================= */
+  /* =========================================================
+     PAGE GUARD
+     ========================================================= */
 
-function guardPage(
-    allowedRoles,
-    onAuthorized
-) {
+  function guardPage(allowedRoles, onAuthorized) {
 
-    auth.onAuthStateChanged(
-        async function(user) {
+    let handled = false;
 
-            /* ---------------------------------------------
-               No authenticated user
-               --------------------------------------------- */
+    auth.onAuthStateChanged(async function (user) {
 
-            if (!user) {
+      if (handled) {
+        return;
+      }
 
-                console.log(
-                    "CESS: No authenticated user."
-                );
+      if (!user) {
 
-                window.location.replace(
-                    "login.html"
-                );
+        window.location.replace("login.html");
 
-                return;
-            }
+        return;
+      }
 
+      try {
 
-            try {
+        const profile =
+          await getCurrentUserProfile();
 
-                /* -----------------------------------------
-                   Get CESS profile
-                   ----------------------------------------- */
+        if (!profile) {
 
-                const profile =
-                    await getCurrentUserProfile();
+          await auth.signOut();
 
+          window.location.replace("login.html");
 
-                if (!profile) {
-
-                    console.error(
-                        "CESS: Authenticated user has no profile."
-                    );
-
-                    await auth.signOut();
-
-                    window.location.replace(
-                        "login.html"
-                    );
-
-                    return;
-                }
-
-
-                /* -----------------------------------------
-                   Check role
-                   ----------------------------------------- */
-
-                if (
-                    !allowedRoles.includes(
-                        profile.role
-                    )
-                ) {
-
-                    console.warn(
-                        "CESS: Unauthorized role:",
-                        profile.role
-                    );
-
-
-                    redirectToRoleHome(
-                        profile.role
-                    );
-
-                    return;
-                }
-
-
-                /* -----------------------------------------
-                   Authorized
-                   ----------------------------------------- */
-
-                console.log(
-                    "CESS: Page authorization successful:",
-                    profile.role
-                );
-
-
-                if (
-                    typeof onAuthorized === "function"
-                ) {
-
-                    onAuthorized(profile);
-                }
-
-            } catch (error) {
-
-                console.error(
-                    "CESS: Page guard error:",
-                    error
-                );
-
-                window.location.replace(
-                    "login.html"
-                );
-            }
-
+          return;
         }
-    );
-}
+
+        if (
+          !Array.isArray(allowedRoles) ||
+          !allowedRoles.includes(profile.role)
+        ) {
+
+          redirectToRoleHome(profile.role);
+
+          return;
+        }
+
+        handled = true;
+
+        if (typeof onAuthorized === "function") {
+          onAuthorized(profile);
+        }
+
+      } catch (error) {
+
+        console.error(
+          "CESS AUTH: Guard error:",
+          error
+        );
+
+        await auth.signOut();
+
+        window.location.replace("login.html");
+      }
+
+    });
+  }
 
 
-/* =========================================================
-   AUTH ERROR TRANSLATION
-   ========================================================= */
+  /* =========================================================
+     FRIENDLY AUTH ERRORS
+     ========================================================= */
 
-function friendlyAuthError(error) {
+  function friendlyAuthError(error) {
 
-    const code =
-        error && error.code
-            ? error.code
-            : "";
+    if (!error) {
+      return "Something went wrong. Please try again.";
+    }
 
+    const code = error.code || "";
 
-    const map = {
+    const messages = {
 
-        "auth/email-already-in-use":
-            "This email is already registered. Please log in instead.",
+      "auth/email-already-in-use":
+        "This email is already registered. Please log in instead.",
 
-        "auth/invalid-email":
-            "Please enter a valid email address.",
+      "auth/invalid-email":
+        "Please enter a valid email address.",
 
-        "auth/weak-password":
-            "Password is too weak. Use at least 6 characters.",
+      "auth/weak-password":
+        "Password must contain at least 6 characters.",
 
-        "auth/user-not-found":
-            "No account was found with this email.",
+      "auth/user-not-found":
+        "No account was found with this email.",
 
-        "auth/wrong-password":
-            "Incorrect password. Please try again.",
+      "auth/wrong-password":
+        "Incorrect password. Please try again.",
 
-        "auth/invalid-credential":
-            "Incorrect email or password.",
+      "auth/invalid-credential":
+        "Incorrect email or password.",
 
-        "auth/user-disabled":
-            "This account has been disabled.",
+      "auth/user-disabled":
+        "This account has been disabled.",
 
-        "auth/too-many-requests":
-            "Too many attempts. Please wait and try again.",
+      "auth/too-many-requests":
+        "Too many attempts. Please wait and try again.",
 
-        "auth/network-request-failed":
-            "Network error. Please check your internet connection.",
+      "auth/network-request-failed":
+        "Network error. Please check your internet connection.",
 
-        "auth/operation-not-allowed":
-            "Email/password authentication is not enabled in Firebase.",
+      "auth/operation-not-allowed":
+        "Email/password authentication is not enabled.",
 
-        "auth/requires-recent-login":
-            "Please log in again and retry this operation."
+      "auth/missing-password":
+        "Please enter your password.",
 
+      "auth/invalid-password":
+        "The password is incorrect.",
+
+      "auth/requires-recent-login":
+        "Please log in again and retry this action."
     };
 
-
     return (
-        map[code] ||
-        error.message ||
-        "Something went wrong. Please try again."
+      messages[code] ||
+      error.message ||
+      "Something went wrong. Please try again."
     );
-}
+  }
 
 
-/* =========================================================
-   AUTH STATE HELPER
-   ========================================================= */
+  /* =========================================================
+     PUBLIC API
+     ========================================================= */
 
-function getLoggedInUser() {
+  window.CESS_AUTH = {
+    getCurrentUserProfile,
+    loginUser,
+    registerUser,
+    logoutUser,
+    sendPasswordReset,
+    guardPage,
+    friendlyAuthError,
+    redirectToRoleHome
+  };
 
-    return auth.currentUser || null;
-}
+
+  /*
+   * Backward compatibility.
+   * Existing CESS pages can continue calling these names.
+   */
+
+  window.getCurrentUserProfile =
+    getCurrentUserProfile;
+
+  window.loginUser =
+    loginUser;
+
+  window.registerUser =
+    registerUser;
+
+  window.logoutUser =
+    logoutUser;
+
+  window.sendPasswordReset =
+    sendPasswordReset;
+
+  window.guardPage =
+    guardPage;
+
+  window.friendlyAuthError =
+    friendlyAuthError;
+
+  window.redirectToRoleHome =
+    redirectToRoleHome;
+
+})();
