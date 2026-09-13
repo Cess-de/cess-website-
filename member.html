@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Member Dashboard — CESS</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="responsive.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="nav-wrapper">
+    <a href="index.html" class="logo-link">
+      <img src="cess-logo.png" alt="CESS logo" onerror="this.style.display='none'">
+      <span class="logo-text-mark">
+        <span class="primary">CESS</span>
+        <span class="secondary" data-en="Member Dashboard" data-ar="لوحة العضو">Member Dashboard</span>
+      </span>
+    </a>
+    <div class="nav-actions">
+      <button id="lang-toggle" aria-label="Switch language"><span id="lang-toggle-label">AR</span></button>
+      <button class="btn btn-outline" id="logout-btn" data-en="Logout" data-ar="تسجيل الخروج">Logout</button>
+    </div>
+  </div>
+</header>
+
+<div class="dashboard-layout">
+  <aside class="dashboard-sidebar">
+    <a href="#welcome" class="active" data-en="Welcome" data-ar="مرحبًا">Welcome</a>
+    <a href="#announcements" data-en="Announcements" data-ar="الإعلانات">Announcements</a>
+    <a href="#activities" data-en="Upcoming Activities" data-ar="الأنشطة القادمة">Upcoming Activities</a>
+    <a href="#resources" data-en="Resources" data-ar="المصادر">Resources</a>
+    <a href="#membership" data-en="Membership" data-ar="العضوية">Membership</a>
+    <a href="#profile" data-en="Profile" data-ar="الملف الشخصي">Profile</a>
+  </aside>
+
+  <main class="dashboard-main">
+    <section id="welcome">
+      <h1><span data-en="Welcome" data-ar="مرحبًا">Welcome</span>, <span id="member-name">...</span></h1>
+      <p data-en="Here's what's happening in CESS." data-ar="إليك آخر مستجدات CESS.">Here's what's happening in CESS.</p>
+    </section>
+
+    <section id="announcements" class="mt-4">
+      <h2 data-en="Announcements" data-ar="الإعلانات">Announcements</h2>
+      <div class="grid" id="member-announcements"></div>
+    </section>
+
+    <section id="activities" class="mt-4">
+      <h2 data-en="Upcoming Activities" data-ar="الأنشطة القادمة">Upcoming Activities</h2>
+      <div class="grid" id="member-activities"></div>
+    </section>
+
+    <section id="resources" class="mt-4">
+      <h2 data-en="Resources" data-ar="المصادر">Resources</h2>
+      <div class="grid" id="member-resources"></div>
+    </section>
+
+    <section id="membership" class="mt-4">
+      <h2 data-en="Membership" data-ar="العضوية">Membership</h2>
+      <table>
+        <tbody>
+          <tr><th data-en="Full Name" data-ar="الاسم الكامل">Full Name</th><td id="profile-name-cell"></td></tr>
+          <tr><th data-en="Email" data-ar="البريد الإلكتروني">Email</th><td id="profile-email-cell"></td></tr>
+          <tr><th data-en="Batch / Cohort" data-ar="الدفعة">Batch / Cohort</th><td id="profile-batch-cell"></td></tr>
+          <tr><th data-en="Role" data-ar="الدور">Role</th><td id="profile-role-cell"></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="profile" class="mt-4">
+      <h2 data-en="Profile" data-ar="الملف الشخصي">Profile</h2>
+      <p data-en="To update your profile details, please contact CESS leadership." data-ar="لتحديث بيانات ملفك الشخصي، يرجى التواصل مع قيادة CESS.">
+        To update your profile details, please contact CESS leadership.
+      </p>
+    </section>
+  </main>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="auth.js"></script>
+<script src="app.js"></script>
+<script src="member.js"></script>
+</body>
+</html>

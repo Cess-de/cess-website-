@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login — CESS</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="responsive.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="nav-wrapper">
+    <a href="index.html" class="logo-link">
+      <img src="cess-logo.png" alt="CESS logo" onerror="this.style.display='none'">
+      <span class="logo-text-mark">
+        <span class="primary">CESS</span>
+        <span class="secondary" data-en="Civil Engineering Student Society" data-ar="جمعية طلاب الهندسة المدنية">Civil Engineering Student Society</span>
+      </span>
+    </a>
+    <button class="hamburger" id="hamburger" aria-label="Toggle navigation"><span></span><span></span><span></span></button>
+    <nav class="nav-menu" id="nav-menu">
+      <a href="index.html" data-en="Home" data-ar="الرئيسية">Home</a>
+      <a href="about.html" data-en="About" data-ar="عن الجمعية">About</a>
+      <a href="activities.html" data-en="Activities" data-ar="الأنشطة">Activities</a>
+      <a href="contact.html" data-en="Contact" data-ar="تواصل معنا">Contact</a>
+      <div class="nav-actions">
+        <button id="lang-toggle" aria-label="Switch language"><span id="lang-toggle-label">AR</span></button>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<div class="form-card">
+  <h1 class="text-center" data-en="Login" data-ar="تسجيل الدخول">Login</h1>
+  <form id="login-form">
+    <div class="form-group">
+      <label for="email" data-en="Email" data-ar="البريد الإلكتروني">Email</label>
+      <input type="email" id="email" required autocomplete="email">
+    </div>
+    <div class="form-group">
+      <label for="password" data-en="Password" data-ar="كلمة المرور">Password</label>
+      <input type="password" id="password" required autocomplete="current-password">
+    </div>
+    <p class="form-error" id="login-error"></p>
+    <button type="submit" class="btn btn-primary" style="width:100%;" data-en="Login" data-ar="تسجيل الدخول">Login</button>
+  </form>
+  <p class="form-footer-link">
+    <a href="#" id="forgot-password-link" data-en="Forgot password?" data-ar="نسيت كلمة المرور؟">Forgot password?</a>
+  </p>
+  <p class="form-footer-link">
+    <span data-en="Don't have an account?" data-ar="ليس لديك حساب؟">Don't have an account?</span>
+    <a href="register.html" data-en="Create one" data-ar="أنشئ حسابًا">Create one</a>
+  </p>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="auth.js"></script>
+<script src="app.js"></script>
+<script>
+  document.getElementById("login-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const errorEl = document.getElementById("login-error");
+    errorEl.classList.remove("visible");
+
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+
+    try {
+      await loginUser(email, password);
+    } catch (err) {
+      errorEl.textContent = friendlyAuthError(err);
+      errorEl.classList.add("visible");
+    }
+  });
+
+  document.getElementById("forgot-password-link").addEventListener("click", async (e) => {
+    e.preventDefault();
+    const email = document.getElementById("email").value.trim();
+    const errorEl = document.getElementById("login-error");
+    errorEl.classList.remove("visible");
+
+    if (!email) {
+      errorEl.textContent = getLang() === "ar" ? "يرجى إدخال بريدك الإلكتروني أولاً." : "Please enter your email address first.";
+      errorEl.classList.add("visible");
+      return;
+    }
+
+    try {
+      await sendPasswordReset(email);
+      errorEl.style.color = "var(--color-success)";
+      errorEl.textContent = getLang() === "ar" ? "تم إرسال رابط إعادة التعيين إلى بريدك الإلكتروني." : "Password reset email sent.";
+      errorEl.classList.add("visible");
+    } catch (err) {
+      errorEl.style.color = "var(--color-danger)";
+      errorEl.textContent = friendlyAuthError(err);
+      errorEl.classList.add("visible");
+    }
+  });
+</script>
+</body>
+</html>
