@@ -1,425 +1,556 @@
-/* =========================================================
-   ADD NEW ACTIVITY — ADMIN
-   ========================================================= */
+async function openNewActivityForm() {
+  // Prevent duplicate modal
+  const oldModal = document.getElementById("cess-activity-modal");
 
-function openNewActivityForm() {
-
-  // منع فتح أكثر من نافذة في نفس الوقت
-  const existingModal =
-    document.getElementById("cess-activity-modal");
-
-  if (existingModal) {
-    existingModal.remove();
+  if (oldModal) {
+    oldModal.remove();
   }
 
-  /* -------------------------------------------------------
-     Create Modal
-  ------------------------------------------------------- */
+  // Make sure Firebase authentication is ready
+  const currentUser = auth.currentUser;
 
-  const modal =
-    document.createElement("div");
+  if (!currentUser) {
+    alert("Your session has expired. Please log in again.");
+    window.location.href = "login.html";
+    return;
+  }
 
-  modal.id =
-    "cess-activity-modal";
+  // --------------------------------------------------
+  // 1. Load and verify the current user's profile
+  // --------------------------------------------------
+
+  let profile;
+
+  try {
+    const userDoc = await db
+      .collection(CESS_CONFIG.collections.USERS)
+      .doc(currentUser.uid)
+      .get();
+
+    if (!userDoc.exists) {
+      alert("Your user profile was not found.");
+      return;
+    }
+
+    profile = {
+      uid: currentUser.uid,
+      ...userDoc.data()
+    };
+
+  } catch (error) {
+    console.error("Error loading admin profile:", error);
+
+    alert(
+      "Unable to verify your account.\n\n" +
+      error.message
+    );
+
+    return;
+  }
+
+  // Only leadership/admin can create activities
+  if (
+    profile.role !== CESS_CONFIG.roles.ADMIN &&
+    profile.role !== CESS_CONFIG.roles.LEADERSHIP
+  ) {
+    alert("You do not have permission to add activities.");
+    return;
+  }
+
+  // --------------------------------------------------
+  // 2. Add modal CSS once
+  // --------------------------------------------------
+
+  if (!document.getElementById("cess-activity-modal-style")) {
+
+    const style = document.createElement("style");
+
+    style.id = "cess-activity-modal-style";
+
+    style.textContent = `
+      #cess-activity-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        background: rgba(0, 0, 0, 0.65);
+        backdrop-filter: blur(4px);
+      }
+
+      #cess-activity-modal .cess-activity-box {
+        width: min(600px, 100%);
+        max-height: 90vh;
+        overflow-y: auto;
+        background: #ffffff;
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+        font-family: inherit;
+      }
+
+      #cess-activity-modal h2 {
+        margin: 0 0 6px;
+        font-size: 24px;
+        color: #111827;
+      }
+
+      #cess-activity-modal .cess-activity-subtitle {
+        margin: 0 0 22px;
+        color: #6b7280;
+        font-size: 14px;
+      }
+
+      #cess-activity-modal .cess-field {
+        margin-bottom: 17px;
+      }
+
+      #cess-activity-modal label {
+        display: block;
+        margin-bottom: 7px;
+        font-weight: 600;
+        font-size: 14px;
+        color: #374151;
+      }
+
+      #cess-activity-modal input,
+      #cess-activity-modal textarea {
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid #d1d5db;
+        border-radius: 9px;
+        padding: 11px 12px;
+        font: inherit;
+        background: #fff;
+        color: #111827;
+        outline: none;
+      }
+
+      #cess-activity-modal input:focus,
+      #cess-activity-modal textarea:focus {
+        border-color: #0B2D5B;
+        box-shadow: 0 0 0 3px rgba(11,45,91,0.10);
+      }
+
+      #cess-activity-modal textarea {
+        min-height: 120px;
+        resize: vertical;
+      }
+
+      #cess-activity-modal .cess-checkbox-row {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        margin-top: 5px;
+      }
+
+      #cess-activity-modal .cess-checkbox-row input {
+        width: auto;
+      }
+
+      #cess-activity-modal .cess-checkbox-row label {
+        margin: 0;
+        cursor: pointer;
+      }
+
+      #cess-activity-modal .cess-error {
+        display: none;
+        margin-bottom: 16px;
+        padding: 11px 13px;
+        border-radius: 8px;
+        background: #fee2e2;
+        color: #991b1b;
+        font-size: 14px;
+      }
+
+      #cess-activity-modal .cess-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 24px;
+      }
+
+      #cess-activity-modal button {
+        border: none;
+        border-radius: 9px;
+        padding: 11px 18px;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      #cess-activity-modal .cess-cancel-btn {
+        background: #e5e7eb;
+        color: #374151;
+      }
+
+      #cess-activity-modal .cess-submit-btn {
+        background: #0B2D5B;
+        color: #ffffff;
+      }
+
+      #cess-activity-modal .cess-submit-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      @media (max-width: 600px) {
+        #cess-activity-modal {
+          padding: 12px;
+        }
+
+        #cess-activity-modal .cess-activity-box {
+          padding: 20px;
+          border-radius: 13px;
+        }
+
+        #cess-activity-modal .cess-actions {
+          flex-direction: column-reverse;
+        }
+
+        #cess-activity-modal button {
+          width: 100%;
+        }
+      }
+    `;
+
+    document.head.appendChild(style);
+  }
+
+  // --------------------------------------------------
+  // 3. Create modal
+  // --------------------------------------------------
+
+  const modal = document.createElement("div");
+
+  modal.id = "cess-activity-modal";
 
   modal.innerHTML = `
     <div
-      class="cess-modal-overlay"
-      id="cess-activity-overlay"
+      class="cess-activity-box"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="cess-activity-title"
     >
 
-      <div class="cess-modal">
+      <h2 id="cess-activity-title">
+        Add Activity
+      </h2>
 
-        <div class="cess-modal-header">
+      <p class="cess-activity-subtitle">
+        Create a new activity for the Civil Engineering Student Society.
+      </p>
 
-          <h2>
-            Add New Activity
-          </h2>
+      <div
+        id="cess-activity-error"
+        class="cess-error"
+      ></div>
+
+      <form id="cess-activity-form">
+
+        <div class="cess-field">
+          <label for="cess-activity-title-input">
+            Activity Title
+          </label>
+
+          <input
+            id="cess-activity-title-input"
+            type="text"
+            placeholder="Enter activity title"
+            required
+            maxlength="200"
+          >
+        </div>
+
+        <div class="cess-field">
+          <label for="cess-activity-description">
+            Description
+          </label>
+
+          <textarea
+            id="cess-activity-description"
+            placeholder="Describe the activity..."
+            required
+            maxlength="5000"
+          ></textarea>
+        </div>
+
+        <div class="cess-field">
+          <label for="cess-activity-date">
+            Date
+          </label>
+
+          <input
+            id="cess-activity-date"
+            type="date"
+            required
+          >
+        </div>
+
+        <div class="cess-field">
+          <label for="cess-activity-image">
+            Image URL
+            <span style="font-weight:400;color:#6b7280;">
+              (optional)
+            </span>
+          </label>
+
+          <input
+            id="cess-activity-image"
+            type="url"
+            placeholder="https://example.com/image.jpg"
+          >
+        </div>
+
+        <div class="cess-field">
+
+          <div class="cess-checkbox-row">
+
+            <input
+              id="cess-activity-published"
+              type="checkbox"
+              checked
+            >
+
+            <label for="cess-activity-published">
+              Publish this activity immediately
+            </label>
+
+          </div>
+
+        </div>
+
+        <div class="cess-actions">
 
           <button
             type="button"
-            id="close-activity-modal"
-            class="cess-modal-close"
+            class="cess-cancel-btn"
+            id="cess-activity-cancel"
           >
-            ×
+            Cancel
+          </button>
+
+          <button
+            type="submit"
+            class="cess-submit-btn"
+            id="cess-activity-submit"
+          >
+            Add Activity
           </button>
 
         </div>
 
-
-        <form id="cess-activity-form">
-
-          <!-- Title -->
-
-          <div class="cess-form-group">
-
-            <label for="activity-title">
-              Activity Title
-            </label>
-
-            <input
-              type="text"
-              id="activity-title"
-              name="title"
-              placeholder="Enter activity title"
-              required
-            >
-
-          </div>
-
-
-          <!-- Description -->
-
-          <div class="cess-form-group">
-
-            <label for="activity-description">
-              Description
-            </label>
-
-            <textarea
-              id="activity-description"
-              name="description"
-              rows="5"
-              placeholder="Enter activity description"
-              required
-            ></textarea>
-
-          </div>
-
-
-          <!-- Date -->
-
-          <div class="cess-form-group">
-
-            <label for="activity-date">
-              Activity Date
-            </label>
-
-            <input
-              type="date"
-              id="activity-date"
-              name="date"
-              required
-            >
-
-          </div>
-
-
-          <!-- Image URL -->
-
-          <div class="cess-form-group">
-
-            <label for="activity-image">
-              Image URL
-              <span>(Optional)</span>
-            </label>
-
-            <input
-              type="url"
-              id="activity-image"
-              name="image"
-              placeholder="https://..."
-            >
-
-          </div>
-
-
-          <!-- Published -->
-
-          <div class="cess-form-group cess-checkbox-group">
-
-            <label>
-
-              <input
-                type="checkbox"
-                id="activity-published"
-                checked
-              >
-
-              <span>
-                Publish this activity immediately
-              </span>
-
-            </label>
-
-          </div>
-
-
-          <!-- Error -->
-
-          <div
-            id="activity-form-error"
-            class="cess-form-error"
-          ></div>
-
-
-          <!-- Success -->
-
-          <div
-            id="activity-form-success"
-            class="cess-form-success"
-          ></div>
-
-
-          <!-- Buttons -->
-
-          <div class="cess-modal-actions">
-
-            <button
-              type="button"
-              id="cancel-activity-btn"
-              class="cess-cancel-btn"
-            >
-              Cancel
-            </button>
-
-            <button
-              type="submit"
-              id="save-activity-btn"
-              class="cess-save-btn"
-            >
-              Add Activity
-            </button>
-
-          </div>
-
-        </form>
-
-      </div>
+      </form>
 
     </div>
   `;
 
   document.body.appendChild(modal);
 
+  // --------------------------------------------------
+  // 4. Set today's date automatically
+  // --------------------------------------------------
 
-  /* -------------------------------------------------------
-     Elements
-  ------------------------------------------------------- */
+  const dateInput = document.getElementById(
+    "cess-activity-date"
+  );
 
-  const overlay =
-    document.getElementById(
-      "cess-activity-overlay"
-    );
+  const today = new Date();
 
-  const form =
-    document.getElementById(
-      "cess-activity-form"
-    );
+  const yyyy = today.getFullYear();
 
-  const closeButton =
-    document.getElementById(
-      "close-activity-modal"
-    );
+  const mm = String(
+    today.getMonth() + 1
+  ).padStart(2, "0");
 
-  const cancelButton =
-    document.getElementById(
-      "cancel-activity-btn"
-    );
+  const dd = String(
+    today.getDate()
+  ).padStart(2, "0");
 
-  const saveButton =
-    document.getElementById(
-      "save-activity-btn"
-    );
+  dateInput.value = `${yyyy}-${mm}-${dd}`;
 
-  const errorElement =
-    document.getElementById(
-      "activity-form-error"
-    );
+  // Focus title
+  document
+    .getElementById("cess-activity-title-input")
+    .focus();
 
-  const successElement =
-    document.getElementById(
-      "activity-form-success"
-    );
-
-
-  /* -------------------------------------------------------
-     Close Modal
-  ------------------------------------------------------- */
+  // --------------------------------------------------
+  // 5. Close modal helper
+  // --------------------------------------------------
 
   function closeModal() {
-    modal.remove();
+    const activeModal = document.getElementById(
+      "cess-activity-modal"
+    );
+
+    if (activeModal) {
+      activeModal.remove();
+    }
   }
 
+  // Cancel button
+  document
+    .getElementById("cess-activity-cancel")
+    .addEventListener("click", closeModal);
 
-  closeButton.addEventListener(
-    "click",
-    closeModal
-  );
+  // Click outside modal
+  modal.addEventListener("click", (event) => {
 
-  cancelButton.addEventListener(
-    "click",
-    closeModal
-  );
-
-
-  overlay.addEventListener(
-    "click",
-    (event) => {
-
-      if (
-        event.target === overlay
-      ) {
-        closeModal();
-      }
-
+    if (event.target === modal) {
+      closeModal();
     }
+
+  });
+
+  // Escape key
+  function handleEscape(event) {
+
+    if (event.key === "Escape") {
+      closeModal();
+
+      document.removeEventListener(
+        "keydown",
+        handleEscape
+      );
+    }
+
+  }
+
+  document.addEventListener(
+    "keydown",
+    handleEscape
   );
 
+  // --------------------------------------------------
+  // 6. Submit activity
+  // --------------------------------------------------
 
-  /* -------------------------------------------------------
-     Submit Activity
-  ------------------------------------------------------- */
-
-  form.addEventListener(
-    "submit",
-    async (event) => {
+  document
+    .getElementById("cess-activity-form")
+    .addEventListener("submit", async (event) => {
 
       event.preventDefault();
 
+      const submitButton =
+        document.getElementById(
+          "cess-activity-submit"
+        );
 
-      errorElement.textContent = "";
-      errorElement.classList.remove(
-        "visible"
-      );
-
-      successElement.textContent = "";
-      successElement.classList.remove(
-        "visible"
-      );
-
-
-      /* -----------------------------------------------
-         Read Values
-      ------------------------------------------------ */
+      const errorBox =
+        document.getElementById(
+          "cess-activity-error"
+        );
 
       const title =
         document
           .getElementById(
-            "activity-title"
+            "cess-activity-title-input"
           )
           .value
           .trim();
-
 
       const description =
         document
           .getElementById(
-            "activity-description"
+            "cess-activity-description"
           )
           .value
           .trim();
-
 
       const date =
         document
           .getElementById(
-            "activity-date"
+            "cess-activity-date"
           )
           .value;
-
 
       const image =
         document
           .getElementById(
-            "activity-image"
+            "cess-activity-image"
           )
           .value
           .trim();
 
-
       const published =
         document
           .getElementById(
-            "activity-published"
+            "cess-activity-published"
           )
           .checked;
 
+      // ----------------------------------------------
+      // Validation
+      // ----------------------------------------------
 
-      /* -----------------------------------------------
-         Validation
-      ------------------------------------------------ */
+      errorBox.style.display = "none";
+      errorBox.textContent = "";
 
       if (!title) {
-
-        errorElement.textContent =
+        errorBox.textContent =
           "Please enter the activity title.";
 
-        errorElement.classList.add(
-          "visible"
-        );
-
+        errorBox.style.display = "block";
         return;
       }
-
 
       if (!description) {
-
-        errorElement.textContent =
+        errorBox.textContent =
           "Please enter the activity description.";
 
-        errorElement.classList.add(
-          "visible"
-        );
-
+        errorBox.style.display = "block";
         return;
       }
-
 
       if (!date) {
-
-        errorElement.textContent =
+        errorBox.textContent =
           "Please select the activity date.";
 
-        errorElement.classList.add(
-          "visible"
-        );
-
+        errorBox.style.display = "block";
         return;
       }
 
+      if (image) {
 
-      /* -----------------------------------------------
-         Check Authentication
-      ------------------------------------------------ */
+        try {
+          new URL(image);
+        } catch (error) {
 
-      const currentUser =
-        auth.currentUser;
+          errorBox.textContent =
+            "Please enter a valid image URL.";
 
-      if (!currentUser) {
+          errorBox.style.display = "block";
 
-        errorElement.textContent =
-          "Your session has expired. Please log in again.";
+          return;
+        }
 
-        errorElement.classList.add(
-          "visible"
-        );
-
-        return;
       }
 
+      // ----------------------------------------------
+      // Prevent double submission
+      // ----------------------------------------------
 
-      /* -----------------------------------------------
-         Save
-      ------------------------------------------------ */
+      submitButton.disabled = true;
+      submitButton.textContent = "Adding...";
 
       try {
 
-        saveButton.disabled = true;
+        // Make sure the session still exists
+        const activeUser = auth.currentUser;
 
-        saveButton.textContent =
-          "Adding...";
+        if (!activeUser) {
+          throw new Error(
+            "Your login session has expired."
+          );
+        }
 
-
-        /*
-         * Create activity document.
-         *
-         * Firestore automatically generates
-         * the document ID.
-         */
+        // --------------------------------------------
+        // Data saved to Firestore
+        // --------------------------------------------
 
         const activityData = {
-
           title: title,
 
           description: description,
@@ -436,117 +567,99 @@ function openNewActivityForm() {
             firebase.firestore.FieldValue
               .serverTimestamp(),
 
-          createdBy:
-            currentUser.uid
-
+          createdBy: activeUser.uid
         };
 
-
-        /*
-         * Image is optional.
-         * We only save it when the admin
-         * actually entered a URL.
-         */
-
+        // Only save image when provided
         if (image) {
           activityData.image = image;
         }
 
+        // --------------------------------------------
+        // Add document
+        // --------------------------------------------
 
-        const docRef =
+        const activityRef =
           await db
             .collection(
               CESS_CONFIG.collections.ACTIVITIES
             )
             .add(activityData);
 
-
         console.log(
-          "ACTIVITY CREATED:",
-          docRef.id
+          "CESS activity created:",
+          activityRef.id
         );
 
+        // --------------------------------------------
+        // Close modal
+        // --------------------------------------------
 
-        /* -------------------------------------------
-           Success
-        ------------------------------------------- */
+        closeModal();
 
-        successElement.textContent =
-          "Activity added successfully.";
+        // --------------------------------------------
+        // Refresh admin activities table
+        // --------------------------------------------
 
-        successElement.classList.add(
-          "visible"
+        if (
+          typeof loadAdminActivitiesTable ===
+          "function"
+        ) {
+          await loadAdminActivitiesTable();
+        }
+
+        // --------------------------------------------
+        // Success message
+        // --------------------------------------------
+
+        alert(
+          "Activity added successfully."
         );
 
-
-        saveButton.textContent =
-          "Added";
-
-
-        /*
-         * Refresh Activities table
-         * immediately.
-         */
-
-        await loadAdminActivitiesTable();
-
-
-        /*
-         * Close modal after short delay
-         */
-
-        setTimeout(() => {
-
-          closeModal();
-
-        }, 700);
-
-
-      } catch (err) {
+      } catch (error) {
 
         console.error(
-          "ADD ACTIVITY ERROR:",
-          err
+          "Error adding CESS activity:",
+          error
         );
 
+        submitButton.disabled = false;
+        submitButton.textContent = "Add Activity";
 
-        errorElement.textContent =
-          `${err.code || "Error"} — ${
-            err.message ||
-            "Unable to add activity."
-          }`;
+        let message =
+          "Unable to add the activity.";
 
-        errorElement.classList.add(
-          "visible"
-        );
+        if (
+          error &&
+          error.code ===
+          "permission-denied"
+        ) {
 
+          message =
+            "Permission denied. Make sure your account has the admin or leadership role.";
 
-        saveButton.disabled = false;
+        } else if (
+          error &&
+          error.code ===
+          "unavailable"
+        ) {
 
-        saveButton.textContent =
-          "Add Activity";
+          message =
+            "Firebase is currently unavailable. Check your internet connection and try again.";
 
+        } else if (
+          error &&
+          error.message
+        ) {
+
+          message =
+            error.message;
+        }
+
+        errorBox.textContent = message;
+
+        errorBox.style.display = "block";
       }
 
-    }
-  );
-
-
-  /* -------------------------------------------------------
-     Focus title
-  ------------------------------------------------------- */
-
-  setTimeout(() => {
-
-    const titleInput =
-      document.getElementById(
-        "activity-title"
-      );
-
-    if (titleInput) {
-      titleInput.focus();
-    }
-
-  }, 50);
-
+    });
 }
