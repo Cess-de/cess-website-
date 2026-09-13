@@ -132,6 +132,7 @@ function friendlyAuthError(error) {
     "auth/weak-password": "Password should be at least 6 characters.",
     "auth/user-not-found": "No account found with this email.",
     "auth/wrong-password": "Incorrect password. Please try again.",
+     "auth/invalid-credential": "Incorrect email or password. Please try again.",
     "auth/too-many-requests": "Too many attempts. Please wait a moment and try again.",
     "auth/network-request-failed": "Network error. Please check your connection."
   };
