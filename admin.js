@@ -1,708 +1,1231 @@
 /* =========================================================
-   CESS ADMIN — USERS & ROLES
+   CESS — ADMIN DASHBOARD
+   =========================================================
+   This file controls the Admin Dashboard only.
+
+   It does NOT modify:
+   - auth.js
+   - firebase-config.js
+   - Firestore Rules
+   - login system
+   - registration system
    ========================================================= */
 
-async function loadAdminUsersTable() {
+(function () {
+    "use strict";
 
-  "use strict";
+    /* =====================================================
+       GLOBAL STATE
+       ===================================================== */
 
-  console.log("CESS ADMIN: Loading users...");
-
-
-  /* =======================================================
-     FIND USERS TABLE
-  ======================================================= */
-
-  const tableBody =
-    document.getElementById("admin-users-table-body");
-
-  const usersContainer =
-    document.getElementById("admin-users-container");
-
-  const usersMessage =
-    document.getElementById("admin-users-message");
-
-
-  /*
-   * We support more than one possible ID so the function
-   * remains compatible with the existing admin page.
-   */
-
-  const body =
-    tableBody ||
-    document.querySelector(
-      "#users-table tbody"
-    ) ||
-    document.querySelector(
-      "#admin-users-table tbody"
-    );
-
-
-  if (!body) {
-
-    console.error(
-      "CESS ADMIN: Users table body was not found."
-    );
-
-    if (usersMessage) {
-
-      usersMessage.textContent =
-        "Users table was not found.";
-
-    }
-
-    return;
-
-  }
-
-
-  /* =======================================================
-     LOADING
-  ======================================================= */
-
-  body.innerHTML = `
-    <tr>
-      <td
-        colspan="5"
-        style="text-align:center;padding:25px;"
-      >
-        Loading users...
-      </td>
-    </tr>
-  `;
-
-
-  /* =======================================================
-     FIREBASE CHECK
-  ======================================================= */
-
-  if (
-    typeof db === "undefined" ||
-    typeof auth === "undefined"
-  ) {
-
-    console.error(
-      "CESS ADMIN: Firebase is not initialized."
-    );
-
-    body.innerHTML = `
-      <tr>
-        <td
-          colspan="5"
-          style="text-align:center;padding:25px;"
-        >
-          Firebase is not initialized.
-        </td>
-      </tr>
-    `;
-
-    return;
-
-  }
-
-
-  /* =======================================================
-     AUTH CHECK
-  ======================================================= */
-
-  const currentUser =
-    auth.currentUser;
-
-
-  if (!currentUser) {
-
-    body.innerHTML = `
-      <tr>
-        <td
-          colspan="5"
-          style="text-align:center;padding:25px;"
-        >
-          Please log in again.
-        </td>
-      </tr>
-    `;
-
-    return;
-
-  }
-
-
-  /* =======================================================
-     LOAD USERS
-  ======================================================= */
-
-  try {
-
-    const snapshot =
-      await db
-        .collection(
-          CESS_CONFIG.collections.USERS
-        )
-        .get();
-
-
-    console.log(
-      "CESS ADMIN: Users loaded:",
-      snapshot.size
-    );
+    let currentAdmin = null;
 
 
     /* =====================================================
-       NO USERS
-    ===================================================== */
+       SMALL HELPERS
+       ===================================================== */
 
-    if (snapshot.empty) {
-
-      body.innerHTML = `
-        <tr>
-          <td
-            colspan="5"
-            style="text-align:center;padding:25px;"
-          >
-            No registered users yet.
-          </td>
-        </tr>
-      `;
-
-      return;
-
+    function $(id) {
+        return document.getElementById(id);
     }
 
 
-    /* =====================================================
-       BUILD USERS
-    ===================================================== */
-
-    const users = [];
-
-
-    snapshot.forEach(
-      function (doc) {
-
-        const data =
-          doc.data() || {};
+    function escapeHTML(value) {
+        const div = document.createElement("div");
+        div.textContent = value == null ? "" : String(value);
+        return div.innerHTML;
+    }
 
 
-        users.push({
+    function setStatus(id, message, type) {
 
-          uid:
-            doc.id,
+        const element = $(id);
 
-          name:
-            data.name ||
-            data.fullName ||
-            "Unnamed User",
+        if (!element) return;
 
-          email:
-            data.email ||
-            "—",
+        element.textContent = message;
 
-          batch:
-            data.batch ||
-            "—",
-
-          role:
-            data.role ||
-            "member",
-
-          createdAt:
-            data.createdAt ||
-            null
-
-        });
-
-      }
-    );
+        element.dataset.status = type || "";
+    }
 
 
-    /* =====================================================
-       SORT USERS
-    ===================================================== */
+    function showLoading(tbodyId, columns) {
 
-    users.sort(
-      function (a, b) {
+        const tbody = $(tbodyId);
 
-        const nameA =
-          String(a.name)
-            .toLowerCase();
+        if (!tbody) return;
 
-        const nameB =
-          String(b.name)
-            .toLowerCase();
-
-        return nameA.localeCompare(
-          nameB
-        );
-
-      }
-    );
-
-
-    /* =====================================================
-       CLEAR TABLE
-    ===================================================== */
-
-    body.innerHTML = "";
-
-
-    /* =====================================================
-       RENDER USERS
-    ===================================================== */
-
-    users.forEach(
-      function (user) {
-
-        const row =
-          document.createElement("tr");
-
-
-        /* -------------------------------------------------
-           NAME
-        ------------------------------------------------- */
-
-        const nameCell =
-          document.createElement("td");
-
-        nameCell.textContent =
-          user.name;
-
-
-        /* -------------------------------------------------
-           EMAIL
-        ------------------------------------------------- */
-
-        const emailCell =
-          document.createElement("td");
-
-        emailCell.textContent =
-          user.email;
-
-
-        /* -------------------------------------------------
-           BATCH
-        ------------------------------------------------- */
-
-        const batchCell =
-          document.createElement("td");
-
-        batchCell.textContent =
-          user.batch;
-
-
-        /* -------------------------------------------------
-           ROLE
-        ------------------------------------------------- */
-
-        const roleCell =
-          document.createElement("td");
-
-
-        const roleSelect =
-          document.createElement("select");
-
-        roleSelect.className =
-          "cess-role-select";
-
-
-        roleSelect.innerHTML = `
-
-          <option
-            value="member"
-            ${
-              user.role === "member"
-                ? "selected"
-                : ""
-            }
-          >
-            Member
-          </option>
-
-          <option
-            value="leadership"
-            ${
-              user.role === "leadership"
-                ? "selected"
-                : ""
-            }
-          >
-            Leadership
-          </option>
-
-          <option
-            value="admin"
-            ${
-              user.role === "admin"
-                ? "selected"
-                : ""
-            }
-          >
-            Admin
-          </option>
-
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="${columns}"
+                    style="text-align:center;padding:25px;">
+                    جاري التحميل...
+                </td>
+            </tr>
         `;
+    }
 
 
-        /*
-         * Prevent changing the currently logged-in
-         * admin's own role.
-         */
+    function showEmpty(tbodyId, columns, message) {
 
-        if (
-          user.uid ===
-          currentUser.uid
-        ) {
+        const tbody = $(tbodyId);
 
-          roleSelect.disabled =
-            true;
+        if (!tbody) return;
 
-          roleSelect.title =
-            "You cannot change your own admin role.";
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="${columns}"
+                    style="text-align:center;padding:25px;">
+                    ${escapeHTML(message)}
+                </td>
+            </tr>
+        `;
+    }
 
+
+    function showError(tbodyId, columns, error) {
+
+        const tbody = $(tbodyId);
+
+        if (!tbody) return;
+
+        const message =
+            error && error.message
+                ? error.message
+                : "حدث خطأ غير معروف.";
+
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="${columns}"
+                    style="
+                        text-align:center;
+                        padding:25px;
+                        color:#b00020;
+                    ">
+                    تعذر تحميل البيانات.
+                    <br>
+                    <small>
+                        ${escapeHTML(message)}
+                    </small>
+                </td>
+            </tr>
+        `;
+    }
+
+
+    /* =====================================================
+       CHECK FIREBASE
+       ===================================================== */
+
+    function checkFirebase() {
+
+        if (typeof firebase === "undefined") {
+            throw new Error("Firebase غير محمل.");
         }
 
-
-        roleCell.appendChild(
-          roleSelect
-        );
-
-
-        /* -------------------------------------------------
-           ACTION
-        ------------------------------------------------- */
-
-        const actionCell =
-          document.createElement("td");
-
-
-        const saveButton =
-          document.createElement("button");
-
-
-        saveButton.type =
-          "button";
-
-        saveButton.textContent =
-          "Save";
-
-        saveButton.className =
-          "cess-save-role-btn";
-
-
-        /*
-         * Current user cannot modify own role.
-         */
-
-        if (
-          user.uid ===
-          currentUser.uid
-        ) {
-
-          saveButton.disabled =
-            true;
-
+        if (typeof auth === "undefined") {
+            throw new Error("Firebase Authentication غير مهيأ.");
         }
 
+        if (typeof db === "undefined") {
+            throw new Error("Firestore غير مهيأ.");
+        }
+    }
 
-        /* =================================================
-           ROLE CHANGE
-        ================================================= */
 
-        roleSelect.addEventListener(
-          "change",
-          function () {
+    /* =====================================================
+       GET CURRENT ADMIN PROFILE
+       ===================================================== */
 
-            saveButton.disabled =
-              false;
+    async function getAdminProfile() {
 
-          }
+        checkFirebase();
+
+        const user = auth.currentUser;
+
+        if (!user) {
+            throw new Error("لا يوجد مستخدم مسجل الدخول.");
+        }
+
+        const profileSnapshot = await db
+            .collection("users")
+            .doc(user.uid)
+            .get();
+
+        if (!profileSnapshot.exists) {
+            throw new Error(
+                "لم يتم العثور على ملف المستخدم في Firestore."
+            );
+        }
+
+        const profile = profileSnapshot.data() || {};
+
+        if (profile.role !== "admin") {
+            throw new Error(
+                "هذا الحساب لا يملك صلاحيات Admin."
+            );
+        }
+
+        currentAdmin = {
+            uid: user.uid,
+            email: user.email || "",
+            ...profile
+        };
+
+        return currentAdmin;
+    }
+
+
+    /* =====================================================
+       USERS
+       ===================================================== */
+
+    async function loadAdminUsersTable() {
+
+        const tbody = $("admin-users-table-body");
+
+        if (!tbody) {
+            console.warn(
+                "CESS: admin-users-table-body غير موجود."
+            );
+            return;
+        }
+
+        showLoading(
+            "admin-users-table-body",
+            5
         );
 
+        setStatus(
+            "users-status",
+            "جاري تحميل المستخدمين...",
+            "loading"
+        );
 
-        /* =================================================
-           SAVE ROLE
-        ================================================= */
+        try {
 
-        saveButton.addEventListener(
-          "click",
-          async function () {
+            await getAdminProfile();
 
-            const newRole =
-              roleSelect.value;
+            /*
+             * Read the complete users collection.
+             * This intentionally does not use orderBy(),
+             * so documents without a particular field
+             * will not disappear from the result.
+             */
 
+            const snapshot = await db
+                .collection("users")
+                .get();
 
-            /* ---------------------------------------------
-               VALID ROLE
-            --------------------------------------------- */
+            if (snapshot.empty) {
 
-            const validRoles = [
-              "member",
-              "leadership",
-              "admin"
-            ];
+                showEmpty(
+                    "admin-users-table-body",
+                    5,
+                    "لا يوجد مستخدمون مسجلون حتى الآن."
+                );
 
+                setStatus(
+                    "users-status",
+                    "لا يوجد مستخدمون.",
+                    "empty"
+                );
 
-            if (
-              !validRoles.includes(
-                newRole
-              )
-            ) {
-
-              alert(
-                "Invalid role selected."
-              );
-
-              return;
-
+                return;
             }
 
 
-            /* ---------------------------------------------
-               PREVENT SELF CHANGE
-            --------------------------------------------- */
+            const users = [];
 
-            if (
-              user.uid ===
-              currentUser.uid
-            ) {
+            snapshot.forEach(function (doc) {
 
-              alert(
-                "You cannot change your own role."
-              );
+                const data = doc.data() || {};
 
-              return;
+                users.push({
 
-            }
+                    uid: doc.id,
 
+                    name:
+                        data.name ||
+                        data.fullName ||
+                        data.displayName ||
+                        "بدون اسم",
 
-            /* ---------------------------------------------
-               CONFIRM
-            --------------------------------------------- */
+                    email:
+                        data.email ||
+                        "بدون بريد",
 
-            const confirmed =
-              window.confirm(
-                `Change ${user.name}'s role to ${newRole}?`
-              );
+                    batch:
+                        data.batch ||
+                        "غير محدد",
 
-
-            if (!confirmed) {
-
-              return;
-
-            }
+                    role:
+                        data.role ||
+                        "member"
+                });
+            });
 
 
-            /* ---------------------------------------------
-               DISABLE
-            --------------------------------------------- */
+            users.sort(function (a, b) {
 
-            saveButton.disabled =
-              true;
-
-            roleSelect.disabled =
-              true;
-
-            saveButton.textContent =
-              "Saving...";
+                return String(a.name).localeCompare(
+                    String(b.name),
+                    "ar",
+                    {
+                        sensitivity: "base"
+                    }
+                );
+            });
 
 
-            /* ---------------------------------------------
-               UPDATE FIRESTORE
-            --------------------------------------------- */
+            tbody.innerHTML = "";
 
-            try {
 
-              await db
-                .collection(
-                  CESS_CONFIG.collections.USERS
-                )
-                .doc(
-                  user.uid
-                )
-                .update({
+            users.forEach(function (user) {
 
-                  role:
-                    newRole
+                const row = document.createElement("tr");
 
+
+                /* NAME */
+
+                const nameCell =
+                    document.createElement("td");
+
+                nameCell.textContent = user.name;
+
+
+                /* EMAIL */
+
+                const emailCell =
+                    document.createElement("td");
+
+                emailCell.textContent = user.email;
+
+
+                /* BATCH */
+
+                const batchCell =
+                    document.createElement("td");
+
+                batchCell.textContent = user.batch;
+
+
+                /* ROLE */
+
+                const roleCell =
+                    document.createElement("td");
+
+                const roleSelect =
+                    document.createElement("select");
+
+                roleSelect.className =
+                    "cess-role-select";
+
+
+                const roleOptions = [
+
+                    {
+                        value: "member",
+                        label: "Member"
+                    },
+
+                    {
+                        value: "leadership",
+                        label: "Leadership"
+                    },
+
+                    {
+                        value: "admin",
+                        label: "Admin"
+                    }
+
+                ];
+
+
+                roleOptions.forEach(function (role) {
+
+                    const option =
+                        document.createElement("option");
+
+                    option.value = role.value;
+
+                    option.textContent = role.label;
+
+                    if (user.role === role.value) {
+                        option.selected = true;
+                    }
+
+                    roleSelect.appendChild(option);
                 });
 
 
-              /* -------------------------------------------
-                 SUCCESS
-              ------------------------------------------- */
+                /*
+                 * Protect currently logged-in Admin
+                 */
 
-              user.role =
-                newRole;
-
-
-              saveButton.textContent =
-                "Saved ✓";
+                const isCurrentAdmin =
+                    user.uid === currentAdmin.uid;
 
 
-              console.log(
-                "CESS ADMIN: Role updated:",
-                user.uid,
-                newRole
-              );
+                if (isCurrentAdmin) {
+
+                    roleSelect.disabled = true;
+
+                    roleSelect.title =
+                        "لا يمكن تغيير دور حسابك الحالي.";
+                }
 
 
-              setTimeout(
-                function () {
-
-                  saveButton.textContent =
-                    "Save";
-
-                  roleSelect.disabled =
-                    false;
-
-                  saveButton.disabled =
-                    true;
-
-                },
-                1200
-              );
+                roleCell.appendChild(roleSelect);
 
 
-            } catch (error) {
+                /* ACTION */
 
-              console.error(
-                "CESS ADMIN: Role update error:",
+                const actionCell =
+                    document.createElement("td");
+
+
+                const saveButton =
+                    document.createElement("button");
+
+
+                saveButton.type = "button";
+
+                saveButton.className =
+                    "cess-save-role-btn";
+
+                saveButton.textContent =
+                    "حفظ";
+
+
+                if (isCurrentAdmin) {
+
+                    saveButton.disabled = true;
+
+                    saveButton.title =
+                        "لا يمكن تعديل حساب Admin الحالي.";
+
+                }
+
+
+                saveButton.addEventListener(
+                    "click",
+                    async function () {
+
+                        if (isCurrentAdmin) {
+
+                            alert(
+                                "لا يمكن تغيير دور حساب Admin الحالي."
+                            );
+
+                            return;
+                        }
+
+
+                        const newRole =
+                            roleSelect.value;
+
+
+                        if (
+                            newRole !== "member" &&
+                            newRole !== "leadership" &&
+                            newRole !== "admin"
+                        ) {
+
+                            alert(
+                                "الدور المحدد غير صحيح."
+                            );
+
+                            return;
+                        }
+
+
+                        const originalText =
+                            saveButton.textContent;
+
+
+                        try {
+
+                            saveButton.disabled =
+                                true;
+
+                            saveButton.textContent =
+                                "جاري الحفظ...";
+
+
+                            await db
+                                .collection("users")
+                                .doc(user.uid)
+                                .update({
+                                    role: newRole
+                                });
+
+
+                            user.role = newRole;
+
+
+                            saveButton.textContent =
+                                "تم الحفظ";
+
+
+                            setTimeout(function () {
+
+                                saveButton.textContent =
+                                    originalText;
+
+                                saveButton.disabled =
+                                    false;
+
+                            }, 1200);
+
+
+                        } catch (error) {
+
+                            console.error(
+                                "CESS: Role update error:",
+                                error
+                            );
+
+
+                            alert(
+                                "تعذر تحديث الدور.\n\n" +
+                                (
+                                    error.message ||
+                                    "حدث خطأ غير معروف."
+                                )
+                            );
+
+
+                            saveButton.textContent =
+                                originalText;
+
+                            saveButton.disabled =
+                                false;
+                        }
+
+                    }
+                );
+
+
+                actionCell.appendChild(
+                    saveButton
+                );
+
+
+                row.appendChild(nameCell);
+                row.appendChild(emailCell);
+                row.appendChild(batchCell);
+                row.appendChild(roleCell);
+                row.appendChild(actionCell);
+
+
+                tbody.appendChild(row);
+
+            });
+
+
+            setStatus(
+                "users-status",
+                `تم تحميل ${users.length} مستخدم.`,
+                "success"
+            );
+
+
+            console.log(
+                "CESS: Users loaded:",
+                users.length
+            );
+
+
+        } catch (error) {
+
+            console.error(
+                "CESS: loadAdminUsersTable error:",
                 error
-              );
+            );
 
 
-              /* -----------------------------------------
-                 ERROR
-              ----------------------------------------- */
-
-              roleSelect.disabled =
-                false;
-
-              saveButton.disabled =
-                false;
-
-              saveButton.textContent =
-                "Save";
+            showError(
+                "admin-users-table-body",
+                5,
+                error
+            );
 
 
-              if (
-                error &&
-                error.code ===
-                  "permission-denied"
-              ) {
-
-                alert(
-                  "Permission denied. Only an admin can change roles."
-                );
-
-              } else {
-
-                alert(
-                  error.message ||
-                  "Unable to update user role."
-                );
-
-              }
-
-            }
-
-          }
-        );
-
-
-        actionCell.appendChild(
-          saveButton
-        );
-
-
-        /* -------------------------------------------------
-           ADD CELLS
-        ------------------------------------------------- */
-
-        row.appendChild(
-          nameCell
-        );
-
-        row.appendChild(
-          emailCell
-        );
-
-        row.appendChild(
-          batchCell
-        );
-
-        row.appendChild(
-          roleCell
-        );
-
-        row.appendChild(
-          actionCell
-        );
-
-
-        body.appendChild(
-          row
-        );
-
-      }
-    );
+            setStatus(
+                "users-status",
+                "حدث خطأ أثناء تحميل المستخدمين.",
+                "error"
+            );
+        }
+    }
 
 
     /* =====================================================
-       UPDATE MESSAGE
-    ===================================================== */
+       ACTIVITIES
+       ===================================================== */
 
-    if (usersMessage) {
+    async function loadAdminActivitiesTable() {
 
-      usersMessage.textContent =
-        `${users.length} registered user${
-          users.length === 1
-            ? ""
-            : "s"
-        }.`;
+        const tbody =
+            $("admin-activities-table-body");
+
+        if (!tbody) return;
+
+        showLoading(
+            "admin-activities-table-body",
+            5
+        );
+
+
+        try {
+
+            await getAdminProfile();
+
+
+            const snapshot = await db
+                .collection("activities")
+                .get();
+
+
+            if (snapshot.empty) {
+
+                showEmpty(
+                    "admin-activities-table-body",
+                    5,
+                    "لا توجد أنشطة حتى الآن."
+                );
+
+                return;
+            }
+
+
+            const activities = [];
+
+
+            snapshot.forEach(function (doc) {
+
+                const data = doc.data() || {};
+
+                activities.push({
+
+                    id: doc.id,
+
+                    title:
+                        data.title ||
+                        data.name ||
+                        "بدون عنوان",
+
+                    date:
+                        data.date ||
+                        "",
+
+                    description:
+                        data.description ||
+                        "",
+
+                    published:
+                        data.published === true
+                });
+
+            });
+
+
+            activities.sort(function (a, b) {
+
+                return String(b.date)
+                    .localeCompare(
+                        String(a.date)
+                    );
+            });
+
+
+            tbody.innerHTML = "";
+
+
+            activities.forEach(function (activity) {
+
+                const row =
+                    document.createElement("tr");
+
+
+                const title =
+                    document.createElement("td");
+
+                title.textContent =
+                    activity.title;
+
+
+                const date =
+                    document.createElement("td");
+
+                date.textContent =
+                    activity.date ||
+                    "غير محدد";
+
+
+                const description =
+                    document.createElement("td");
+
+                description.textContent =
+                    activity.description;
+
+
+                const published =
+                    document.createElement("td");
+
+                published.textContent =
+                    activity.published
+                        ? "Published"
+                        : "Draft";
+
+
+                const action =
+                    document.createElement("td");
+
+
+                const deleteButton =
+                    document.createElement("button");
+
+
+                deleteButton.type =
+                    "button";
+
+                deleteButton.textContent =
+                    "حذف";
+
+
+                deleteButton.addEventListener(
+                    "click",
+                    async function () {
+
+                        const confirmed =
+                            confirm(
+                                "هل أنت متأكد من حذف هذا النشاط؟"
+                            );
+
+
+                        if (!confirmed) return;
+
+
+                        try {
+
+                            deleteButton.disabled =
+                                true;
+
+                            deleteButton.textContent =
+                                "جاري الحذف...";
+
+
+                            await db
+                                .collection("activities")
+                                .doc(activity.id)
+                                .delete();
+
+
+                            row.remove();
+
+
+                        } catch (error) {
+
+                            console.error(
+                                error
+                            );
+
+                            alert(
+                                "تعذر حذف النشاط."
+                            );
+
+                            deleteButton.disabled =
+                                false;
+
+                            deleteButton.textContent =
+                                "حذف";
+                        }
+
+                    }
+                );
+
+
+                action.appendChild(
+                    deleteButton
+                );
+
+
+                row.appendChild(title);
+                row.appendChild(date);
+                row.appendChild(description);
+                row.appendChild(published);
+                row.appendChild(action);
+
+
+                tbody.appendChild(row);
+
+            });
+
+
+        } catch (error) {
+
+            console.error(
+                "CESS: Activities error:",
+                error
+            );
+
+
+            showError(
+                "admin-activities-table-body",
+                5,
+                error
+            );
+        }
+    }
+
+
+    /* =====================================================
+       LOGOUT
+       ===================================================== */
+
+    async function logoutAdmin() {
+
+        try {
+
+            if (
+                typeof auth === "undefined"
+            ) {
+                window.location.replace(
+                    "index.html"
+                );
+
+                return;
+            }
+
+
+            await auth.signOut();
+
+
+            window.location.replace(
+                "index.html"
+            );
+
+
+        } catch (error) {
+
+            console.error(
+                "CESS: Logout error:",
+                error
+            );
+
+
+            alert(
+                "تعذر تسجيل الخروج. حاول مرة أخرى."
+            );
+        }
+    }
+
+
+    /* =====================================================
+       NEW ACTIVITY FORM
+       ===================================================== */
+
+    function openNewActivityForm() {
+
+        const form =
+            $("new-activity-form");
+
+        if (!form) {
+
+            console.warn(
+                "CESS: new-activity-form غير موجود."
+            );
+
+            return;
+        }
+
+
+        form.style.display =
+            "block";
+
+
+        form.scrollIntoView({
+            behavior: "smooth",
+            block: "start"
+        });
+    }
+
+
+    function closeNewActivityForm() {
+
+        const form =
+            $("new-activity-form");
+
+        if (!form) return;
+
+        form.style.display =
+            "none";
+    }
+
+
+    async function createActivity() {
+
+        const title =
+            $("activity-title");
+
+        const date =
+            $("activity-date");
+
+        const description =
+            $("activity-description");
+
+        const published =
+            $("activity-published");
+
+
+        if (!title) return;
+
+
+        const titleValue =
+            title.value.trim();
+
+
+        if (!titleValue) {
+
+            alert(
+                "يرجى كتابة عنوان النشاط."
+            );
+
+            return;
+        }
+
+
+        try {
+
+            await getAdminProfile();
+
+
+            const activity = {
+
+                title:
+                    titleValue,
+
+                date:
+                    date
+                        ? date.value
+                        : "",
+
+                description:
+                    description
+                        ? description.value.trim()
+                        : "",
+
+                published:
+                    published
+                        ? published.checked
+                        : true,
+
+                createdAt:
+                    firebase.firestore.FieldValue.serverTimestamp(),
+
+                createdBy:
+                    currentAdmin.uid
+            };
+
+
+            await db
+                .collection("activities")
+                .add(activity);
+
+
+            alert(
+                "تم إنشاء النشاط بنجاح."
+            );
+
+
+            if (title) {
+                title.value = "";
+            }
+
+            if (date) {
+                date.value = "";
+            }
+
+            if (description) {
+                description.value = "";
+            }
+
+
+            if (published) {
+                published.checked = true;
+            }
+
+
+            closeNewActivityForm();
+
+
+            await loadAdminActivitiesTable();
+
+
+        } catch (error) {
+
+            console.error(
+                "CESS: Create activity error:",
+                error
+            );
+
+
+            alert(
+                "تعذر إنشاء النشاط.\n\n" +
+                (
+                    error.message ||
+                    "حدث خطأ غير معروف."
+                )
+            );
+        }
+    }
+
+
+    /* =====================================================
+       ADMIN PAGE INITIALIZATION
+       ===================================================== */
+
+    async function initializeAdminDashboard() {
+
+        try {
+
+            checkFirebase();
+
+
+            /*
+             * Wait for Firebase Auth state.
+             * This prevents the dashboard from trying to
+             * read Firestore before authentication is ready.
+             */
+
+            auth.onAuthStateChanged(
+                async function (user) {
+
+                    if (!user) {
+
+                        window.location.replace(
+                            "login.html"
+                        );
+
+                        return;
+                    }
+
+
+                    try {
+
+                        await getAdminProfile();
+
+
+                        console.log(
+                            "CESS Admin authenticated:",
+                            currentAdmin
+                        );
+
+
+                        /*
+                         * Load dashboard data.
+                         */
+
+                        await Promise.allSettled([
+
+                            loadAdminUsersTable(),
+
+                            loadAdminActivitiesTable()
+
+                        ]);
+
+
+                    } catch (error) {
+
+                        console.error(
+                            "CESS Admin authorization error:",
+                            error
+                        );
+
+
+                        /*
+                         * Do NOT redirect endlessly.
+                         * Simply return to login.
+                         */
+
+                        await auth.signOut();
+
+
+                        window.location.replace(
+                            "login.html"
+                        );
+                    }
+
+                }
+            );
+
+
+        } catch (error) {
+
+            console.error(
+                "CESS Admin initialization error:",
+                error
+            );
+
+            alert(
+                "تعذر تشغيل لوحة الإدارة.\n\n" +
+                (
+                    error.message ||
+                    "حدث خطأ غير معروف."
+                )
+            );
+        }
+    }
+
+
+    /* =====================================================
+       BUTTON EVENTS
+       ===================================================== */
+
+    function setupAdminButtons() {
+
+        const logoutButton =
+            $("logout-btn");
+
+        if (logoutButton) {
+
+            logoutButton.addEventListener(
+                "click",
+                function (event) {
+
+                    event.preventDefault();
+
+                    logoutAdmin();
+
+                }
+            );
+        }
+
+
+        const newActivityButton =
+            $("new-activity-btn");
+
+        if (newActivityButton) {
+
+            newActivityButton.addEventListener(
+                "click",
+                function (event) {
+
+                    event.preventDefault();
+
+                    openNewActivityForm();
+
+                }
+            );
+        }
+
+
+        const closeActivityButton =
+            $("close-activity-btn");
+
+        if (closeActivityButton) {
+
+            closeActivityButton.addEventListener(
+                "click",
+                function (event) {
+
+                    event.preventDefault();
+
+                    closeNewActivityForm();
+
+                }
+            );
+        }
+
+
+        const createActivityButton =
+            $("create-activity-btn");
+
+        if (createActivityButton) {
+
+            createActivityButton.addEventListener(
+                "click",
+                function (event) {
+
+                    event.preventDefault();
+
+                    createActivity();
+
+                }
+            );
+        }
 
     }
 
 
-    console.log(
-      "CESS ADMIN: Users table rendered successfully."
+    /* =====================================================
+       PUBLIC API
+       ===================================================== */
+
+    window.CESS_ADMIN = {
+
+        loadUsers:
+            loadAdminUsersTable,
+
+        loadActivities:
+            loadAdminActivitiesTable,
+
+        logout:
+            logoutAdmin,
+
+        openNewActivityForm:
+            openNewActivityForm,
+
+        closeNewActivityForm:
+            closeNewActivityForm,
+
+        createActivity:
+            createActivity
+
+    };
+
+
+    /*
+     * Backward compatibility.
+     * If old admin.html code calls these functions directly,
+     * they continue to work.
+     */
+
+    window.loadAdminUsersTable =
+        loadAdminUsersTable;
+
+    window.loadAdminActivitiesTable =
+        loadAdminActivitiesTable;
+
+    window.logoutAdmin =
+        logoutAdmin;
+
+    window.openNewActivityForm =
+        openNewActivityForm;
+
+    window.closeNewActivityForm =
+        closeNewActivityForm;
+
+    window.createActivity =
+        createActivity;
+
+
+    /* =====================================================
+       START
+       ===================================================== */
+
+    document.addEventListener(
+        "DOMContentLoaded",
+        function () {
+
+            setupAdminButtons();
+
+            initializeAdminDashboard();
+
+        }
     );
 
 
-  } catch (error) {
-
-    console.error(
-      "CESS ADMIN: Failed to load users:",
-      error
-    );
-
-
-    let message =
-      "Unable to load registered users.";
-
-
-    if (
-      error &&
-      error.code ===
-        "permission-denied"
-    ) {
-
-      message =
-        "Permission denied. Your account cannot read users.";
-
-    }
-
-
-    body.innerHTML = `
-      <tr>
-        <td
-          colspan="5"
-          style="text-align:center;padding:25px;"
-        >
-          ${message}
-        </td>
-      </tr>
-    `;
-
-  }
-
-}
+})();
