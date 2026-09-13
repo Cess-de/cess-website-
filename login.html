@@ -70,7 +70,14 @@
     const password = document.getElementById("password").value;
 
     try {
-      await loginUser(email, password);
+  console.log("LOGIN START");
+  const result = await auth.signInWithEmailAndPassword(email, password);
+  console.log("LOGIN SUCCESS", result.user.uid);
+  alert("LOGIN SUCCESS");
+} catch (err) {
+  console.error("LOGIN ERROR", err);
+  alert(`${err.code} — ${err.message}`);
+}
     }catch (err) {
   errorEl.textContent = `${err.code} — ${err.message}`;
   errorEl.classList.add("visible");
