@@ -71,10 +71,10 @@
 
     try {
       await loginUser(email, password);
-    } catch (err) {
-      errorEl.textContent = friendlyAuthError(err);
-      errorEl.classList.add("visible");
-    }
+    }catch (err) {
+  errorEl.textContent = `${err.code} — ${err.message}`;
+  errorEl.classList.add("visible");
+}
   });
 
   document.getElementById("forgot-password-link").addEventListener("click", async (e) => {
