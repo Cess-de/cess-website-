@@ -1,12 +1,11 @@
 async function loadAdminActivitiesTable() {
   const tbody = document.getElementById("admin-activities-table");
   if (!tbody) return;
-
   try {
-    const snapshot = await db.collection(
-      CESS_CONFIG.collections.ACTIVITIES
-    ).orderBy("date", "desc").get();
-
+    const snapshot = await db
+      .collection(CESS_CONFIG.collections.ACTIVITIES)
+      .orderBy("date", "desc")
+      .get();
     if (snapshot.empty) {
       tbody.innerHTML = `
         <tr>
@@ -17,14 +16,10 @@ async function loadAdminActivitiesTable() {
       `;
       return;
     }
-
     tbody.innerHTML = "";
-
     snapshot.forEach((doc) => {
       const data = doc.data();
-
       const row = document.createElement("tr");
-
       row.innerHTML = `
         <td>${pickLang(data, "title")}</td>
         <td>${formatDate(data.date)}</td>
@@ -37,7 +32,6 @@ async function loadAdminActivitiesTable() {
           >
             ${data.published ? "Unpublish" : "Publish"}
           </button>
-
           <button
             class="btn btn-danger delete-activity-btn"
             data-id="${doc.id}"
@@ -46,84 +40,82 @@ async function loadAdminActivitiesTable() {
           </button>
         </td>
       `;
-
       tbody.appendChild(row);
     });
-
-    tbody.querySelectorAll(".toggle-publish-btn").forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        const id = btn.getAttribute("data-id");
-        const currentlyPublished =
-          btn.getAttribute("data-published") === "true";
-
-        try {
-          await db
-            .collection(CESS_CONFIG.collections.ACTIVITIES)
-            .doc(id)
-            .update({
-              published: !currentlyPublished,
-              updatedAt:
-                firebase.firestore.FieldValue.serverTimestamp()
-            });
-
-          loadAdminActivitiesTable();
-
-        } catch (err) {
-          console.error(
-            "Failed to toggle publish state:",
-            err
-          );
-
-          alert(
-            getLang() === "ar"
-              ? "تعذر تحديث حالة النشر."
-              : "Failed to update publish state."
-          );
-        }
+    // =========================
+    // Publish / Unpublish
+    // =========================
+    tbody
+      .querySelectorAll(".toggle-publish-btn")
+      .forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const id = btn.getAttribute("data-id");
+          const currentlyPublished =
+            btn.getAttribute("data-published") === "true";
+          try {
+            await db
+              .collection(CESS_CONFIG.collections.ACTIVITIES)
+              .doc(id)
+              .update({
+                published: !currentlyPublished,
+                updatedAt:
+                  firebase.firestore.FieldValue.serverTimestamp()
+              });
+            await loadAdminActivitiesTable();
+          } catch (err) {
+            console.error(
+              "Failed to toggle publish state:",
+              err
+            );
+            alert(
+              getLang() === "ar"
+                ? "تعذر تحديث حالة النشر."
+                : "Failed to update publish state."
+            );
+          }
+        });
       });
-    });
-
-    tbody.querySelectorAll(".delete-activity-btn").forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        const id = btn.getAttribute("data-id");
-
-        const confirmMsg =
-          getLang() === "ar"
-            ? "هل أنت متأكد من حذف هذا النشاط؟"
-            : "Delete this activity? This cannot be undone.";
-
-        if (!confirm(confirmMsg)) return;
-
-        try {
-          await db
-            .collection(CESS_CONFIG.collections.ACTIVITIES)
-            .doc(id)
-            .delete();
-
-          loadAdminActivitiesTable();
-
-        } catch (err) {
-          console.error(
-            "Failed to delete activity:",
-            err
-          );
-
-          alert(
+    // =========================
+    // Delete Activity
+    // =========================
+    tbody
+      .querySelectorAll(".delete-activity-btn")
+      .forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const id = btn.getAttribute("data-id");
+          const confirmMsg =
             getLang() === "ar"
-              ? "تعذر حذف النشاط."
-              : "Failed to delete activity."
-          );
-        }
+              ? "هل أنت متأكد من حذف هذا النشاط؟"
+              : "Delete this activity? This cannot be undone.";
+          if (!confirm(confirmMsg)) return;
+          try {
+            await db
+              .collection(CESS_CONFIG.collections.ACTIVITIES)
+              .doc(id)
+              .delete();
+            await loadAdminActivitiesTable();
+          } catch (err) {
+            console.error(
+              "Failed to delete activity:",
+              err
+            );
+            alert(
+              getLang() === "ar"
+                ? "تعذر حذف النشاط."
+                : "Failed to delete activity."
+            );
+          }
+        });
       });
-    });
-
   } catch (err) {
-    console.error("Failed to load activities:", err);
-
+    console.error(
+      "Failed to load activities:",
+      err
+    );
     tbody.innerHTML = `
       <tr>
         <td colspan="4" class="empty-state">
-          Unable to load activities right now.
+          ${err.code || "ERROR"} — ${err.message || "Unknown error"}
         </td>
       </tr>
     `;
