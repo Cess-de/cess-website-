@@ -4,7 +4,13 @@
 
 function openNewActivityForm() {
 
-  // منع فتح أكثر من نافذة في نفس الوقت
+  "use strict";
+
+
+  /* =======================================================
+     1. PREVENT DUPLICATE MODALS
+  ======================================================= */
+
   const existingModal =
     document.getElementById("cess-activity-modal");
 
@@ -12,9 +18,10 @@ function openNewActivityForm() {
     existingModal.remove();
   }
 
-  /* -------------------------------------------------------
-     Create Modal
-  ------------------------------------------------------- */
+
+  /* =======================================================
+     2. CREATE MODAL
+  ======================================================= */
 
   const modal =
     document.createElement("div");
@@ -22,17 +29,26 @@ function openNewActivityForm() {
   modal.id =
     "cess-activity-modal";
 
+
   modal.innerHTML = `
+
     <div
       class="cess-modal-overlay"
       id="cess-activity-overlay"
     >
 
-      <div class="cess-modal">
+      <div
+        class="cess-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="cess-activity-title-heading"
+      >
+
+        <!-- HEADER -->
 
         <div class="cess-modal-header">
 
-          <h2>
+          <h2 id="cess-activity-title-heading">
             Add New Activity
           </h2>
 
@@ -40,6 +56,7 @@ function openNewActivityForm() {
             type="button"
             id="close-activity-modal"
             class="cess-modal-close"
+            aria-label="Close"
           >
             ×
           </button>
@@ -47,9 +64,15 @@ function openNewActivityForm() {
         </div>
 
 
-        <form id="cess-activity-form">
+        <!-- FORM -->
 
-          <!-- Title -->
+        <form
+          id="cess-activity-form"
+          novalidate
+        >
+
+
+          <!-- TITLE -->
 
           <div class="cess-form-group">
 
@@ -62,13 +85,15 @@ function openNewActivityForm() {
               id="activity-title"
               name="title"
               placeholder="Enter activity title"
+              maxlength="200"
+              autocomplete="off"
               required
             >
 
           </div>
 
 
-          <!-- Description -->
+          <!-- DESCRIPTION -->
 
           <div class="cess-form-group">
 
@@ -80,6 +105,7 @@ function openNewActivityForm() {
               id="activity-description"
               name="description"
               rows="5"
+              maxlength="5000"
               placeholder="Enter activity description"
               required
             ></textarea>
@@ -87,7 +113,7 @@ function openNewActivityForm() {
           </div>
 
 
-          <!-- Date -->
+          <!-- DATE -->
 
           <div class="cess-form-group">
 
@@ -105,7 +131,7 @@ function openNewActivityForm() {
           </div>
 
 
-          <!-- Image URL -->
+          <!-- IMAGE -->
 
           <div class="cess-form-group">
 
@@ -119,14 +145,17 @@ function openNewActivityForm() {
               id="activity-image"
               name="image"
               placeholder="https://..."
+              autocomplete="off"
             >
 
           </div>
 
 
-          <!-- Published -->
+          <!-- PUBLISHED -->
 
-          <div class="cess-form-group cess-checkbox-group">
+          <div
+            class="cess-form-group cess-checkbox-group"
+          >
 
             <label>
 
@@ -145,23 +174,27 @@ function openNewActivityForm() {
           </div>
 
 
-          <!-- Error -->
+          <!-- ERROR -->
 
           <div
             id="activity-form-error"
             class="cess-form-error"
+            role="alert"
+            aria-live="polite"
           ></div>
 
 
-          <!-- Success -->
+          <!-- SUCCESS -->
 
           <div
             id="activity-form-success"
             class="cess-form-success"
+            role="status"
+            aria-live="polite"
           ></div>
 
 
-          <!-- Buttons -->
+          <!-- ACTIONS -->
 
           <div class="cess-modal-actions">
 
@@ -183,19 +216,22 @@ function openNewActivityForm() {
 
           </div>
 
+
         </form>
 
       </div>
 
     </div>
+
   `;
+
 
   document.body.appendChild(modal);
 
 
-  /* -------------------------------------------------------
-     Elements
-  ------------------------------------------------------- */
+  /* =======================================================
+     3. GET ELEMENTS
+  ======================================================= */
 
   const overlay =
     document.getElementById(
@@ -232,34 +268,148 @@ function openNewActivityForm() {
       "activity-form-success"
     );
 
+  const titleInput =
+    document.getElementById(
+      "activity-title"
+    );
 
-  /* -------------------------------------------------------
-     Close Modal
-  ------------------------------------------------------- */
+  const descriptionInput =
+    document.getElementById(
+      "activity-description"
+    );
 
-  function closeModal() {
-    modal.remove();
+  const dateInput =
+    document.getElementById(
+      "activity-date"
+    );
+
+  const imageInput =
+    document.getElementById(
+      "activity-image"
+    );
+
+  const publishedInput =
+    document.getElementById(
+      "activity-published"
+    );
+
+
+  /* =======================================================
+     4. SAFETY CHECK
+  ======================================================= */
+
+  if (
+    !overlay ||
+    !form ||
+    !closeButton ||
+    !cancelButton ||
+    !saveButton ||
+    !errorElement ||
+    !successElement ||
+    !titleInput ||
+    !descriptionInput ||
+    !dateInput ||
+    !imageInput ||
+    !publishedInput
+  ) {
+
+    console.error(
+      "CESS: Activity modal elements are missing."
+    );
+
+    if (modal) {
+      modal.remove();
+    }
+
+    return;
+
   }
 
 
+  /* =======================================================
+     5. HELPER — SHOW ERROR
+  ======================================================= */
+
+  function showError(message) {
+
+    successElement.textContent = "";
+    successElement.classList.remove("visible");
+
+    errorElement.textContent =
+      message || "Something went wrong.";
+
+    errorElement.classList.add("visible");
+
+  }
+
+
+  /* =======================================================
+     6. HELPER — SHOW SUCCESS
+  ======================================================= */
+
+  function showSuccess(message) {
+
+    errorElement.textContent = "";
+    errorElement.classList.remove("visible");
+
+    successElement.textContent =
+      message || "Activity added successfully.";
+
+    successElement.classList.add("visible");
+
+  }
+
+
+  /* =======================================================
+     7. HELPER — CLEAR MESSAGES
+  ======================================================= */
+
+  function clearMessages() {
+
+    errorElement.textContent = "";
+    errorElement.classList.remove("visible");
+
+    successElement.textContent = "";
+    successElement.classList.remove("visible");
+
+  }
+
+
+  /* =======================================================
+     8. CLOSE MODAL
+  ======================================================= */
+
+  let modalClosed = false;
+
+  function closeModal() {
+
+    if (modalClosed) {
+      return;
+    }
+
+    modalClosed = true;
+
+    const currentModal =
+      document.getElementById(
+        "cess-activity-modal"
+      );
+
+    if (currentModal) {
+      currentModal.remove();
+    }
+
+  }
+
+
+  /* =======================================================
+     9. CLOSE EVENTS
+  ======================================================= */
+
   closeButton.addEventListener(
     "click",
-    closeModal
-  );
+    function () {
 
-  cancelButton.addEventListener(
-    "click",
-    closeModal
-  );
-
-
-  overlay.addEventListener(
-    "click",
-    (event) => {
-
-      if (
-        event.target === overlay
-      ) {
+      if (!saveButton.disabled) {
         closeModal();
       }
 
@@ -267,215 +417,346 @@ function openNewActivityForm() {
   );
 
 
-  /* -------------------------------------------------------
-     Submit Activity
-  ------------------------------------------------------- */
+  cancelButton.addEventListener(
+    "click",
+    function () {
+
+      if (!saveButton.disabled) {
+        closeModal();
+      }
+
+    }
+  );
+
+
+  overlay.addEventListener(
+    "click",
+    function (event) {
+
+      if (
+        event.target === overlay &&
+        !saveButton.disabled
+      ) {
+
+        closeModal();
+
+      }
+
+    }
+  );
+
+
+  /* =======================================================
+     10. ESC KEY
+  ======================================================= */
+
+  function handleEscape(event) {
+
+    if (
+      event.key === "Escape" &&
+      !saveButton.disabled
+    ) {
+
+      closeModal();
+
+      document.removeEventListener(
+        "keydown",
+        handleEscape
+      );
+
+    }
+
+  }
+
+
+  document.addEventListener(
+    "keydown",
+    handleEscape
+  );
+
+
+  /* =======================================================
+     11. SUBMIT
+  ======================================================= */
 
   form.addEventListener(
     "submit",
-    async (event) => {
+    async function (event) {
 
       event.preventDefault();
 
 
-      errorElement.textContent = "";
-      errorElement.classList.remove(
-        "visible"
-      );
+      /* -----------------------------------------------
+         CLEAR OLD MESSAGES
+      ----------------------------------------------- */
 
-      successElement.textContent = "";
-      successElement.classList.remove(
-        "visible"
-      );
+      clearMessages();
 
 
       /* -----------------------------------------------
-         Read Values
-      ------------------------------------------------ */
+         PREVENT DOUBLE SUBMISSION
+      ----------------------------------------------- */
+
+      if (saveButton.disabled) {
+        return;
+      }
+
+
+      /* -----------------------------------------------
+         CHECK FIREBASE
+      ----------------------------------------------- */
+
+      if (
+        typeof firebase === "undefined" ||
+        typeof auth === "undefined" ||
+        typeof db === "undefined"
+      ) {
+
+        showError(
+          "Firebase is not initialized correctly."
+        );
+
+        return;
+
+      }
+
+
+      /* -----------------------------------------------
+         READ VALUES
+      ----------------------------------------------- */
 
       const title =
-        document
-          .getElementById(
-            "activity-title"
-          )
-          .value
-          .trim();
-
+        titleInput.value.trim();
 
       const description =
-        document
-          .getElementById(
-            "activity-description"
-          )
-          .value
-          .trim();
-
+        descriptionInput.value.trim();
 
       const date =
-        document
-          .getElementById(
-            "activity-date"
-          )
-          .value;
-
+        dateInput.value;
 
       const image =
-        document
-          .getElementById(
-            "activity-image"
-          )
-          .value
-          .trim();
-
+        imageInput.value.trim();
 
       const published =
-        document
-          .getElementById(
-            "activity-published"
-          )
-          .checked;
+        publishedInput.checked;
 
 
       /* -----------------------------------------------
-         Validation
-      ------------------------------------------------ */
+         VALIDATE TITLE
+      ----------------------------------------------- */
 
       if (!title) {
 
-        errorElement.textContent =
-          "Please enter the activity title.";
-
-        errorElement.classList.add(
-          "visible"
+        showError(
+          "Please enter the activity title."
         );
 
-        return;
-      }
-
-
-      if (!description) {
-
-        errorElement.textContent =
-          "Please enter the activity description.";
-
-        errorElement.classList.add(
-          "visible"
-        );
+        titleInput.focus();
 
         return;
-      }
 
-
-      if (!date) {
-
-        errorElement.textContent =
-          "Please select the activity date.";
-
-        errorElement.classList.add(
-          "visible"
-        );
-
-        return;
       }
 
 
       /* -----------------------------------------------
-         Check Authentication
-      ------------------------------------------------ */
+         VALIDATE DESCRIPTION
+      ----------------------------------------------- */
+
+      if (!description) {
+
+        showError(
+          "Please enter the activity description."
+        );
+
+        descriptionInput.focus();
+
+        return;
+
+      }
+
+
+      /* -----------------------------------------------
+         VALIDATE DATE
+      ----------------------------------------------- */
+
+      if (!date) {
+
+        showError(
+          "Please select the activity date."
+        );
+
+        dateInput.focus();
+
+        return;
+
+      }
+
+
+      /* -----------------------------------------------
+         VALIDATE IMAGE URL
+      ----------------------------------------------- */
+
+      if (image) {
+
+        try {
+
+          const imageURL =
+            new URL(image);
+
+          if (
+            imageURL.protocol !== "http:" &&
+            imageURL.protocol !== "https:"
+          ) {
+
+            showError(
+              "Please enter a valid image URL."
+            );
+
+            imageInput.focus();
+
+            return;
+
+          }
+
+        } catch (urlError) {
+
+          showError(
+            "Please enter a valid image URL."
+          );
+
+          imageInput.focus();
+
+          return;
+
+        }
+
+      }
+
+
+      /* -----------------------------------------------
+         CHECK CURRENT USER
+      ----------------------------------------------- */
 
       const currentUser =
         auth.currentUser;
 
+
       if (!currentUser) {
 
-        errorElement.textContent =
-          "Your session has expired. Please log in again.";
-
-        errorElement.classList.add(
-          "visible"
+        showError(
+          "Your session has expired. Please log in again."
         );
 
         return;
+
       }
 
 
       /* -----------------------------------------------
-         Save
-      ------------------------------------------------ */
+         CHECK CESS CONFIG
+      ----------------------------------------------- */
+
+      if (
+        typeof CESS_CONFIG === "undefined" ||
+        !CESS_CONFIG.collections ||
+        !CESS_CONFIG.collections.ACTIVITIES
+      ) {
+
+        showError(
+          "CESS configuration is missing."
+        );
+
+        console.error(
+          "CESS_CONFIG.collections.ACTIVITIES is missing."
+        );
+
+        return;
+
+      }
+
+
+      /* -----------------------------------------------
+         LOCK FORM
+      ----------------------------------------------- */
+
+      saveButton.disabled = true;
+
+      cancelButton.disabled = true;
+
+      closeButton.disabled = true;
+
+      saveButton.textContent =
+        "Adding...";
+
+
+      /* =================================================
+         CREATE ACTIVITY DATA
+      ================================================= */
+
+      const activityData = {
+
+        title: title,
+
+        description: description,
+
+        date: date,
+
+        published: published,
+
+        createdAt:
+          firebase.firestore.FieldValue
+            .serverTimestamp(),
+
+        updatedAt:
+          firebase.firestore.FieldValue
+            .serverTimestamp(),
+
+        createdBy:
+          currentUser.uid
+
+      };
+
+
+      /* -----------------------------------------------
+         OPTIONAL IMAGE
+      ----------------------------------------------- */
+
+      if (image) {
+
+        activityData.image =
+          image;
+
+      }
+
+
+      /* =================================================
+         SAVE TO FIRESTORE
+      ================================================= */
 
       try {
-
-        saveButton.disabled = true;
-
-        saveButton.textContent =
-          "Adding...";
-
-
-        /*
-         * Create activity document.
-         *
-         * Firestore automatically generates
-         * the document ID.
-         */
-
-        const activityData = {
-
-          title: title,
-
-          description: description,
-
-          date: date,
-
-          published: published,
-
-          createdAt:
-            firebase.firestore.FieldValue
-              .serverTimestamp(),
-
-          updatedAt:
-            firebase.firestore.FieldValue
-              .serverTimestamp(),
-
-          createdBy:
-            currentUser.uid
-
-        };
-
-
-        /*
-         * Image is optional.
-         * We only save it when the admin
-         * actually entered a URL.
-         */
-
-        if (image) {
-          activityData.image = image;
-        }
-
 
         const docRef =
           await db
             .collection(
               CESS_CONFIG.collections.ACTIVITIES
             )
-            .add(activityData);
+            .add(
+              activityData
+            );
 
 
         console.log(
-          "ACTIVITY CREATED:",
+          "CESS — ACTIVITY CREATED:",
           docRef.id
         );
 
 
-        /* -------------------------------------------
-           Success
-        ------------------------------------------- */
+        /* ---------------------------------------------
+           SHOW SUCCESS
+        --------------------------------------------- */
 
-        successElement.textContent =
-          "Activity added successfully.";
-
-        successElement.classList.add(
-          "visible"
+        showSuccess(
+          "Activity added successfully."
         );
 
 
@@ -483,45 +764,135 @@ function openNewActivityForm() {
           "Added";
 
 
-        /*
-         * Refresh Activities table
-         * immediately.
-         */
+        /* ---------------------------------------------
+           REFRESH ACTIVITIES TABLE
+        --------------------------------------------- */
 
-        await loadAdminActivitiesTable();
+        if (
+          typeof loadAdminActivitiesTable ===
+          "function"
+        ) {
+
+          try {
+
+            await loadAdminActivitiesTable();
+
+          } catch (tableError) {
+
+            /*
+             * IMPORTANT:
+             *
+             * The activity was already successfully
+             * saved. A table-refresh error must NOT
+             * make the user think the activity failed.
+             */
+
+            console.error(
+              "CESS — ACTIVITIES TABLE REFRESH ERROR:",
+              tableError
+            );
+
+          }
+
+        }
 
 
-        /*
-         * Close modal after short delay
-         */
+        /* ---------------------------------------------
+           CLOSE AFTER SUCCESS
+        --------------------------------------------- */
 
-        setTimeout(() => {
+        setTimeout(
+          function () {
 
-          closeModal();
+            document.removeEventListener(
+              "keydown",
+              handleEscape
+            );
 
-        }, 700);
+            closeModal();
+
+          },
+          900
+        );
 
 
-      } catch (err) {
+      } catch (error) {
 
         console.error(
-          "ADD ACTIVITY ERROR:",
-          err
+          "CESS — ADD ACTIVITY ERROR:",
+          error
         );
 
 
-        errorElement.textContent =
-          `${err.code || "Error"} — ${
-            err.message ||
-            "Unable to add activity."
-          }`;
+        /* ---------------------------------------------
+           FIREBASE ERROR MESSAGES
+        --------------------------------------------- */
 
-        errorElement.classList.add(
-          "visible"
+        let message =
+          "Unable to add activity.";
+
+
+        if (
+          error &&
+          error.code ===
+            "permission-denied"
+        ) {
+
+          message =
+            "You do not have permission to add activities.";
+
+        } else if (
+          error &&
+          error.code ===
+            "unauthenticated"
+        ) {
+
+          message =
+            "Your session has expired. Please log in again.";
+
+        } else if (
+          error &&
+          error.code ===
+            "failed-precondition"
+        ) {
+
+          message =
+            "Firestore is not ready. Please try again.";
+
+        } else if (
+          error &&
+          error.code ===
+            "unavailable"
+        ) {
+
+          message =
+            "Firebase is temporarily unavailable. Check your internet connection.";
+
+        } else if (
+          error &&
+          error.message
+        ) {
+
+          message =
+            error.message;
+
+        }
+
+
+        showError(
+          message
         );
 
+
+        /* ---------------------------------------------
+           UNLOCK FORM
+        --------------------------------------------- */
 
         saveButton.disabled = false;
+
+        cancelButton.disabled = false;
+
+        closeButton.disabled = false;
 
         saveButton.textContent =
           "Add Activity";
@@ -532,21 +903,25 @@ function openNewActivityForm() {
   );
 
 
-  /* -------------------------------------------------------
-     Focus title
-  ------------------------------------------------------- */
+  /* =======================================================
+     12. FOCUS TITLE
+  ======================================================= */
 
-  setTimeout(() => {
+  setTimeout(
+    function () {
 
-    const titleInput =
-      document.getElementById(
-        "activity-title"
-      );
+      if (
+        document.body.contains(
+          titleInput
+        )
+      ) {
 
-    if (titleInput) {
-      titleInput.focus();
-    }
+        titleInput.focus();
 
-  }, 50);
+      }
+
+    },
+    50
+  );
 
 }
