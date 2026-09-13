@@ -1,88 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>CESS — Login</title>
-
-<link rel="stylesheet" href="style.css">
-<link rel="stylesheet" href="responsive.css">
-</head>
-
-<body>
-
-<div class="form-card">
-
-    <h1>CESS Login</h1>
-
-    <form id="login-form">
-
-        <div class="form-group">
-            <label>Email</label>
-            <input
-                type="email"
-                id="email"
-                required
-                autocomplete="email">
-        </div>
-
-        <div class="form-group">
-            <label>Password</label>
-            <input
-                type="password"
-                id="password"
-                required
-                autocomplete="current-password">
-        </div>
-
-        <button
-            type="submit"
-            id="login-button"
-            class="btn btn-primary"
-            style="width:100%;">
-            Login
-        </button>
-
-    </form>
-
-    <div
-        id="status"
-        style="
-            margin-top:20px;
-            padding:12px;
-            display:none;
-            border-radius:8px;
-            background:#f3f3f3;
-        ">
-    </div>
-
-</div>
-
-
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-
-<!-- Firebase configuration -->
-<script src="firebase-config.js"></script>
-
-
-<script>
-
-const form = document.getElementById("login-form");
-const button = document.getElementById("login-button");
-const status = document.getElementById("status");
-
-function showStatus(message) {
-
-    status.style.display = "block";
-    status.textContent = message;
-
-}
-
-
 form.addEventListener("submit", async function(e) {
 
     e.preventDefault();
@@ -104,8 +19,11 @@ form.addEventListener("submit", async function(e) {
     console.log("Auth:", typeof auth);
     console.log("DB:", typeof db);
 
-
     try {
+
+        /* =====================================================
+           STEP 1 — LOGIN WITH FIREBASE AUTH
+           ===================================================== */
 
         const result =
             await auth.signInWithEmailAndPassword(
@@ -113,24 +31,177 @@ form.addEventListener("submit", async function(e) {
                 password
             );
 
+        const user = result.user;
+
         console.log("LOGIN SUCCESS");
-        console.log("UID:", result.user.uid);
+        console.log("UID:", user.uid);
+        console.log("Email:", user.email);
+
+        showStatus("Login successful. Loading your account...");
+
+
+        /* =====================================================
+           STEP 2 — GET USER PROFILE FROM FIRESTORE
+           ===================================================== */
+
+        const userDoc =
+            await db
+                .collection(CESS_CONFIG.collections.USERS)
+                .doc(user.uid)
+                .get();
+
+
+        /* =====================================================
+           STEP 3 — CHECK USER DOCUMENT
+           ===================================================== */
+
+        if (!userDoc.exists) {
+
+            console.error(
+                "USER PROFILE NOT FOUND:",
+                user.uid
+            );
+
+            showStatus(
+                "Login successful, but your CESS profile was not found."
+            );
+
+            button.disabled = false;
+            button.textContent = "Login";
+
+            return;
+        }
+
+
+        /* =====================================================
+           STEP 4 — READ USER ROLE
+           ===================================================== */
+
+        const profile = userDoc.data();
+
+        const role = profile.role;
+
+        console.log("USER PROFILE:", profile);
+        console.log("USER ROLE:", role);
+
+
+        /* =====================================================
+           STEP 5 — CHECK ROLE
+           ===================================================== */
+
+        if (!role) {
+
+            console.error(
+                "USER ROLE IS MISSING"
+            );
+
+            showStatus(
+                "Your account does not have a CESS role yet."
+            );
+
+            button.disabled = false;
+            button.textContent = "Login";
+
+            return;
+        }
+
+
+        /* =====================================================
+           STEP 6 — REDIRECT ACCORDING TO ROLE
+           ===================================================== */
 
         showStatus(
-            "Login successful. UID: " +
-            result.user.uid
+            "Login successful. Redirecting..."
         );
 
         button.textContent = "Success";
 
-    }
 
-    catch (error) {
+        setTimeout(() => {
 
-        console.error("FIREBASE LOGIN ERROR");
-        console.error("Code:", error.code);
-        console.error("Message:", error.message);
-        console.error(error);
+            switch (role) {
+
+                case "admin":
+
+                    console.log(
+                        "Redirecting to admin.html"
+                    );
+
+                    window.location.href =
+                        "admin.html";
+
+                    break;
+
+
+                case "leadership":
+
+                    console.log(
+                        "Redirecting to leadership.html"
+                    );
+
+                    window.location.href =
+                        "leadership.html";
+
+                    break;
+
+
+                case "member":
+
+                    console.log(
+                        "Redirecting to member.html"
+                    );
+
+                    window.location.href =
+                        "member.html";
+
+                    break;
+
+
+                default:
+
+                    console.error(
+                        "UNKNOWN ROLE:",
+                        role
+                    );
+
+                    showStatus(
+                        "Your account has an invalid CESS role: " +
+                        role
+                    );
+
+                    button.disabled = false;
+                    button.textContent = "Login";
+
+                    break;
+            }
+
+        }, 500);
+
+
+    } catch (error) {
+
+        /* =====================================================
+           FIREBASE ERROR
+           ===================================================== */
+
+        console.error(
+            "FIREBASE LOGIN ERROR"
+        );
+
+        console.error(
+            "Error code:",
+            error.code
+        );
+
+        console.error(
+            "Error message:",
+            error.message
+        );
+
+        console.error(
+            error
+        );
+
 
         showStatus(
             "Firebase Error: " +
@@ -139,14 +210,10 @@ form.addEventListener("submit", async function(e) {
             error.message
         );
 
+
         button.disabled = false;
         button.textContent = "Login";
 
     }
 
 });
-
-</script>
-
-</body>
-</html>
