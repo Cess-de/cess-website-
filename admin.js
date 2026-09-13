@@ -571,8 +571,6 @@ snapshot.forEach((doc) => {
   const published =
     data.published === true;
 
-  const imageUrl = data.imageUrl || "";
-
   const card =
     document.createElement("div");
 
@@ -580,20 +578,6 @@ snapshot.forEach((doc) => {
     "admin-collection-card";
 
   card.innerHTML = `
-    ${
-      imageUrl
-        ? `
-          <div class="admin-card-image">
-            <img
-              src="${escapeAdminHtml(imageUrl)}"
-              alt="${escapeAdminHtml(title)}"
-              loading="lazy"
-            />
-          </div>
-        `
-        : ""
-    }
-
     <div class="admin-card-content">
 
       <h3>
@@ -630,9 +614,6 @@ snapshot.forEach((doc) => {
       data-id="${escapeAdminHtml(
         doc.id
       )}"
-      data-image-path="${escapeAdminHtml(
-        data.imagePath || ""
-      )}"
     >
       Delete
     </button>
@@ -653,9 +634,6 @@ container
         const id =
           button.dataset.id;
 
-        const imagePath =
-          button.dataset.imagePath;
-
         const confirmed = confirm(
           "Are you sure you want to delete this item?"
         );
@@ -667,22 +645,6 @@ container
             .collection(collection)
             .doc(id)
             .delete();
-
-          // Best-effort cleanup of the stored image.
-          // Never blocks deletion of the Firestore doc.
-          if (imagePath) {
-            try {
-              await firebase
-                .storage()
-                .ref(imagePath)
-                .delete();
-            } catch (storageErr) {
-              console.warn(
-                "STORAGE CLEANUP WARNING:",
-                storageErr
-              );
-            }
-          }
 
           await loadAdminCollectionCards(
             collection,
@@ -1008,541 +970,6 @@ alert(
 }
 }
 
-/* =========================================================
-ADD-ITEM MODAL
-(Activities / Announcements / Resources / History)
-Generated entirely in JS — no HTML changes required.
-========================================================= */
-
-const ADD_ITEM_CONFIGS = {
-activity: {
-label: “Activity”,
-collection: () => CESS_CONFIG.collections.ACTIVITIES,
-hasDate: true,
-afterSave: loadAdminActivitiesTable
-},
-announcement: {
-label: “Announcement”,
-collection: () => CESS_CONFIG.collections.ANNOUNCEMENTS,
-hasDate: true,
-afterSave: () =>
-loadAdminCollectionCards(
-CESS_CONFIG.collections.ANNOUNCEMENTS,
-“admin-announcements”
-)
-},
-resource: {
-label: “Resource”,
-collection: () => CESS_CONFIG.collections.RESOURCES,
-hasDate: false,
-afterSave: () =>
-loadAdminCollectionCards(
-CESS_CONFIG.collections.RESOURCES,
-“admin-resources”
-)
-},
-archive: {
-label: “Public Archive Item”,
-collection: () => CESS_CONFIG.collections.PUBLIC_ARCHIVE,
-hasDate: true,
-afterSave: () =>
-loadAdminCollectionCards(
-CESS_CONFIG.collections.PUBLIC_ARCHIVE,
-“admin-archive”
-)
-},
-history: {
-label: “History Item”,
-collection: () => CESS_CONFIG.collections.HISTORY,
-hasDate: true,
-afterSave: () =>
-loadAdminCollectionCards(
-CESS_CONFIG.collections.HISTORY,
-“admin-history”
-)
-}
-};
-
-let addItemModalEl = null;
-let addItemSelectedFile = null;
-
-function injectAddItemModalStyles() {
-if (document.getElementById(“add-item-modal-styles”)) {
-return;
-}
-
-const style = document.createElement(“style”);
-style.id = “add-item-modal-styles”;
-
-style.textContent = `
-.add-item-overlay {
-position: fixed;
-inset: 0;
-background: rgba(0, 0, 0, 0.5);
-display: flex;
-align-items: flex-start;
-justify-content: center;
-overflow-y: auto;
-padding: 24px 16px;
-z-index: 1000;
-}
-
-```
-.add-item-modal {
-  background: #ffffff;
-  border-radius: 10px;
-  max-width: 480px;
-  width: 100%;
-  padding: 20px;
-  box-sizing: border-box;
-  font-family: inherit;
-}
-
-.add-item-modal h2 {
-  margin: 0 0 16px 0;
-  font-size: 1.15rem;
-}
-
-.add-item-field {
-  margin-bottom: 14px;
-}
-
-.add-item-field label {
-  display: block;
-  font-size: 0.85rem;
-  font-weight: 600;
-  margin-bottom: 4px;
-}
-
-.add-item-field input[type="text"],
-.add-item-field input[type="date"],
-.add-item-field textarea {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 8px 10px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  font-size: 0.95rem;
-  font-family: inherit;
-}
-
-.add-item-field textarea {
-  min-height: 70px;
-  resize: vertical;
-}
-
-.add-item-field-row {
-  display: flex;
-  gap: 10px;
-}
-
-.add-item-field-row .add-item-field {
-  flex: 1;
-}
-
-.add-item-image-preview {
-  margin-top: 8px;
-  max-width: 100%;
-  max-height: 140px;
-  border-radius: 6px;
-  display: none;
-}
-
-.add-item-image-preview.visible {
-  display: block;
-}
-
-.add-item-checkbox-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 14px;
-}
-
-.add-item-checkbox-row label {
-  font-size: 0.9rem;
-  margin: 0;
-}
-
-.add-item-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 18px;
-}
-
-.add-item-actions button {
-  padding: 8px 16px;
-  border-radius: 6px;
-  border: none;
-  font-size: 0.9rem;
-  cursor: pointer;
-}
-
-.add-item-cancel-btn {
-  background: #e5e5e5;
-  color: #222;
-}
-
-.add-item-save-btn {
-  background: #1c6dd0;
-  color: #fff;
-}
-
-.add-item-save-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.add-item-error {
-  color: #c0392b;
-  font-size: 0.85rem;
-  margin-top: 10px;
-  display: none;
-}
-
-.add-item-error.visible {
-  display: block;
-}
-
-.add-item-progress {
-  font-size: 0.85rem;
-  color: #555;
-  margin-top: 10px;
-  display: none;
-}
-
-.add-item-progress.visible {
-  display: block;
-}
-
-/* Cards with images, for loadAdminCollectionCards() output */
-.admin-card-image {
-  width: 100%;
-  max-height: 160px;
-  overflow: hidden;
-  border-radius: 8px 8px 0 0;
-}
-
-.admin-card-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-```
-
-`;
-
-document.head.appendChild(style);
-}
-
-function closeAddItemModal() {
-if (addItemModalEl) {
-addItemModalEl.remove();
-addItemModalEl = null;
-}
-addItemSelectedFile = null;
-}
-
-function openAddItemModal(type) {
-const config = ADD_ITEM_CONFIGS[type];
-
-if (!config) {
-console.error(“Unknown add-item type:”, type);
-return;
-}
-
-injectAddItemModalStyles();
-closeAddItemModal();
-
-addItemSelectedFile = null;
-
-const overlay = document.createElement(“div”);
-overlay.className = “add-item-overlay”;
-
-overlay.innerHTML = `
-<div class="add-item-modal">
-<h2>Add ${escapeAdminHtml(config.label)}</h2>
-
-```
-  <div class="add-item-field">
-    <label for="add-item-title-en">Title (English)</label>
-    <input type="text" id="add-item-title-en" />
-  </div>
-
-  <div class="add-item-field">
-    <label for="add-item-title-ar">العنوان (عربي)</label>
-    <input type="text" id="add-item-title-ar" dir="rtl" />
-  </div>
-
-  <div class="add-item-field">
-    <label for="add-item-desc-en">Description (English)</label>
-    <textarea id="add-item-desc-en"></textarea>
-  </div>
-
-  <div class="add-item-field">
-    <label for="add-item-desc-ar">الوصف (عربي)</label>
-    <textarea id="add-item-desc-ar" dir="rtl"></textarea>
-  </div>
-
-  ${
-    config.hasDate
-      ? `
-        <div class="add-item-field">
-          <label for="add-item-date">Date</label>
-          <input type="date" id="add-item-date" />
-        </div>
-      `
-      : ""
-  }
-
-  <div class="add-item-field">
-    <label for="add-item-image">Image (optional)</label>
-    <input type="file" id="add-item-image" accept="image/*" />
-    <img class="add-item-image-preview" id="add-item-image-preview" />
-  </div>
-
-  <div class="add-item-checkbox-row">
-    <input type="checkbox" id="add-item-published" />
-    <label for="add-item-published">Publish immediately</label>
-  </div>
-
-  <div class="add-item-error" id="add-item-error"></div>
-  <div class="add-item-progress" id="add-item-progress"></div>
-
-  <div class="add-item-actions">
-    <button type="button" class="add-item-cancel-btn" id="add-item-cancel-btn">
-      Cancel
-    </button>
-    <button type="button" class="add-item-save-btn" id="add-item-save-btn">
-      Save
-    </button>
-  </div>
-</div>
-```
-
-`;
-
-document.body.appendChild(overlay);
-addItemModalEl = overlay;
-
-// Close when clicking outside the modal card
-overlay.addEventListener(“click”, (e) => {
-if (e.target === overlay) {
-closeAddItemModal();
-}
-});
-
-overlay
-.querySelector(”#add-item-cancel-btn”)
-.addEventListener(“click”, closeAddItemModal);
-
-const imageInput = overlay.querySelector(”#add-item-image”);
-const imagePreview = overlay.querySelector(”#add-item-image-preview”);
-
-imageInput.addEventListener(“change”, () => {
-const file = imageInput.files && imageInput.files[0];
-
-```
-if (!file) {
-  addItemSelectedFile = null;
-  imagePreview.classList.remove("visible");
-  return;
-}
-
-if (!file.type.startsWith("image/")) {
-  showAddItemError("Please choose an image file.");
-  imageInput.value = "";
-  addItemSelectedFile = null;
-  return;
-}
-
-// 5MB cap to stay well within Firebase free-tier bandwidth
-if (file.size > 5 * 1024 * 1024) {
-  showAddItemError("Image must be smaller than 5MB.");
-  imageInput.value = "";
-  addItemSelectedFile = null;
-  return;
-}
-
-addItemSelectedFile = file;
-
-const reader = new FileReader();
-reader.onload = (e) => {
-  imagePreview.src = e.target.result;
-  imagePreview.classList.add("visible");
-};
-reader.readAsDataURL(file);
-```
-
-});
-
-overlay
-.querySelector(”#add-item-save-btn”)
-.addEventListener(“click”, () => {
-handleAddItemSave(type, config);
-});
-}
-
-function showAddItemError(message) {
-if (!addItemModalEl) return;
-
-const errorEl = addItemModalEl.querySelector(”#add-item-error”);
-
-if (errorEl) {
-errorEl.textContent = message;
-errorEl.classList.add(“visible”);
-}
-}
-
-function clearAddItemError() {
-if (!addItemModalEl) return;
-
-const errorEl = addItemModalEl.querySelector(”#add-item-error”);
-
-if (errorEl) {
-errorEl.textContent = “”;
-errorEl.classList.remove(“visible”);
-}
-}
-
-function setAddItemProgress(message) {
-if (!addItemModalEl) return;
-
-const progressEl = addItemModalEl.querySelector(”#add-item-progress”);
-
-if (progressEl) {
-if (message) {
-progressEl.textContent = message;
-progressEl.classList.add(“visible”);
-} else {
-progressEl.textContent = “”;
-progressEl.classList.remove(“visible”);
-}
-}
-}
-
-async function handleAddItemSave(type, config) {
-if (!addItemModalEl) return;
-
-clearAddItemError();
-
-const titleEn = addItemModalEl
-.querySelector(”#add-item-title-en”)
-.value.trim();
-
-const titleAr = addItemModalEl
-.querySelector(”#add-item-title-ar”)
-.value.trim();
-
-const descEn = addItemModalEl
-.querySelector(”#add-item-desc-en”)
-.value.trim();
-
-const descAr = addItemModalEl
-.querySelector(”#add-item-desc-ar”)
-.value.trim();
-
-const published = addItemModalEl.querySelector(
-“#add-item-published”
-).checked;
-
-if (!titleEn && !titleAr) {
-showAddItemError(
-“Please provide a title in at least one language.”
-);
-return;
-}
-
-let dateValue = null;
-
-if (config.hasDate) {
-const dateInput = addItemModalEl.querySelector(”#add-item-date”);
-const rawDate = dateInput ? dateInput.value : “”;
-
-```
-if (!rawDate) {
-  showAddItemError("Please choose a date.");
-  return;
-}
-
-dateValue = rawDate; // stored as "YYYY-MM-DD" string
-```
-
-}
-
-const saveBtn = addItemModalEl.querySelector(”#add-item-save-btn”);
-saveBtn.disabled = true;
-saveBtn.textContent = “Saving…”;
-
-try {
-const docData = {
-title_en: titleEn,
-title_ar: titleAr,
-title: titleEn || titleAr,
-description_en: descEn,
-description_ar: descAr,
-description: descEn || descAr,
-published: published,
-createdAt: firebase.firestore.FieldValue.serverTimestamp()
-};
-
-```
-if (config.hasDate) {
-  docData.date = dateValue;
-}
-
-// Create the Firestore document first so we have an ID
-// to namespace the uploaded image under Storage.
-const docRef = await db.collection(config.collection()).add(docData);
-
-if (addItemSelectedFile) {
-  setAddItemProgress("Uploading image...");
-
-  const extension =
-    addItemSelectedFile.name.split(".").pop() || "jpg";
-
-  const imagePath = `${config.collection()}/${docRef.id}/image.${extension}`;
-
-  const storageRef = firebase.storage().ref(imagePath);
-
-  await storageRef.put(addItemSelectedFile);
-
-  const imageUrl = await storageRef.getDownloadURL();
-
-  await docRef.update({
-    imageUrl: imageUrl,
-    imagePath: imagePath
-  });
-}
-
-setAddItemProgress("");
-closeAddItemModal();
-
-if (typeof config.afterSave === "function") {
-  await config.afterSave();
-}
-```
-
-} catch (err) {
-console.error(“ADD ITEM ERROR:”, err);
-
-```
-setAddItemProgress("");
-saveBtn.disabled = false;
-saveBtn.textContent = "Save";
-
-showAddItemError(
-  `${err.code || "Error"} — ${
-    err.message || "Unable to save item."
-  }`
-);
-```
-
-}
-}
-
 /* ———————————————————
 DOM INITIALIZATION
 ——————————————————— */
@@ -1690,53 +1117,107 @@ if (refreshStatsButton) {
 
 
 /* -----------------------------------------------------
-   New Activity / Announcement / Resource / Archive / History
-   — now opens the add-item modal instead of an alert()
+   New Activity
 ----------------------------------------------------- */
 
 const newActivityButton =
-  document.getElementById("new-activity-btn");
+  document.getElementById(
+    "new-activity-btn"
+  );
 
 if (newActivityButton) {
-  newActivityButton.addEventListener("click", () => {
-    openAddItemModal("activity");
-  });
+  newActivityButton.addEventListener(
+    "click",
+    () => {
+      alert(
+        "To add a new activity, create the activity document in Firestore under the activities collection."
+      );
+    }
+  );
 }
+
+
+/* -----------------------------------------------------
+   New Announcement
+----------------------------------------------------- */
 
 const newAnnouncementButton =
-  document.getElementById("new-announcement-btn");
+  document.getElementById(
+    "new-announcement-btn"
+  );
 
 if (newAnnouncementButton) {
-  newAnnouncementButton.addEventListener("click", () => {
-    openAddItemModal("announcement");
-  });
+  newAnnouncementButton.addEventListener(
+    "click",
+    () => {
+      alert(
+        "To add a new announcement, create the announcement document in Firestore under the announcements collection."
+      );
+    }
+  );
 }
+
+
+/* -----------------------------------------------------
+   New Resource
+----------------------------------------------------- */
 
 const newResourceButton =
-  document.getElementById("new-resource-btn");
+  document.getElementById(
+    "new-resource-btn"
+  );
 
 if (newResourceButton) {
-  newResourceButton.addEventListener("click", () => {
-    openAddItemModal("resource");
-  });
+  newResourceButton.addEventListener(
+    "click",
+    () => {
+      alert(
+        "To add a new resource, create the resource document in Firestore under the resources collection."
+      );
+    }
+  );
 }
+
+
+/* -----------------------------------------------------
+   New Public Archive
+----------------------------------------------------- */
 
 const newArchiveButton =
-  document.getElementById("new-archive-btn");
+  document.getElementById(
+    "new-archive-btn"
+  );
 
 if (newArchiveButton) {
-  newArchiveButton.addEventListener("click", () => {
-    openAddItemModal("archive");
-  });
+  newArchiveButton.addEventListener(
+    "click",
+    () => {
+      alert(
+        "To add a public archive item, create the document in Firestore under the publicArchive collection."
+      );
+    }
+  );
 }
 
+
+/* -----------------------------------------------------
+   New History
+----------------------------------------------------- */
+
 const newHistoryButton =
-  document.getElementById("new-history-btn");
+  document.getElementById(
+    "new-history-btn"
+  );
 
 if (newHistoryButton) {
-  newHistoryButton.addEventListener("click", () => {
-    openAddItemModal("history");
-  });
+  newHistoryButton.addEventListener(
+    "click",
+    () => {
+      alert(
+        "To add a history item, create the document in Firestore under the history collection."
+      );
+    }
+  );
 }
 ```
 
