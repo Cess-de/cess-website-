@@ -1,324 +1,54 @@
 /* =========================================================
-   ADD NEW ACTIVITY — ADMIN
+   CESS ADMIN — USERS & ROLES
    ========================================================= */
 
-function openNewActivityForm() {
+async function loadAdminUsersTable() {
 
   "use strict";
 
-
-  /* =======================================================
-     1. PREVENT DUPLICATE MODALS
-  ======================================================= */
-
-  const existingModal =
-    document.getElementById("cess-activity-modal");
-
-  if (existingModal) {
-    existingModal.remove();
-  }
+  console.log("CESS ADMIN: Loading users...");
 
 
   /* =======================================================
-     2. CREATE MODAL
+     FIND USERS TABLE
   ======================================================= */
 
-  const modal =
-    document.createElement("div");
-
-  modal.id =
-    "cess-activity-modal";
-
-
-  modal.innerHTML = `
-
-    <div
-      class="cess-modal-overlay"
-      id="cess-activity-overlay"
-    >
-
-      <div
-        class="cess-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="cess-activity-title-heading"
-      >
-
-        <!-- HEADER -->
-
-        <div class="cess-modal-header">
-
-          <h2 id="cess-activity-title-heading">
-            Add New Activity
-          </h2>
-
-          <button
-            type="button"
-            id="close-activity-modal"
-            class="cess-modal-close"
-            aria-label="Close"
-          >
-            ×
-          </button>
-
-        </div>
-
-
-        <!-- FORM -->
-
-        <form
-          id="cess-activity-form"
-          novalidate
-        >
-
-
-          <!-- TITLE -->
-
-          <div class="cess-form-group">
-
-            <label for="activity-title">
-              Activity Title
-            </label>
-
-            <input
-              type="text"
-              id="activity-title"
-              name="title"
-              placeholder="Enter activity title"
-              maxlength="200"
-              autocomplete="off"
-              required
-            >
-
-          </div>
-
-
-          <!-- DESCRIPTION -->
-
-          <div class="cess-form-group">
-
-            <label for="activity-description">
-              Description
-            </label>
-
-            <textarea
-              id="activity-description"
-              name="description"
-              rows="5"
-              maxlength="5000"
-              placeholder="Enter activity description"
-              required
-            ></textarea>
-
-          </div>
-
-
-          <!-- DATE -->
-
-          <div class="cess-form-group">
-
-            <label for="activity-date">
-              Activity Date
-            </label>
-
-            <input
-              type="date"
-              id="activity-date"
-              name="date"
-              required
-            >
-
-          </div>
-
-
-          <!-- IMAGE -->
-
-          <div class="cess-form-group">
-
-            <label for="activity-image">
-              Image URL
-              <span>(Optional)</span>
-            </label>
-
-            <input
-              type="url"
-              id="activity-image"
-              name="image"
-              placeholder="https://..."
-              autocomplete="off"
-            >
-
-          </div>
-
-
-          <!-- PUBLISHED -->
-
-          <div
-            class="cess-form-group cess-checkbox-group"
-          >
-
-            <label>
-
-              <input
-                type="checkbox"
-                id="activity-published"
-                checked
-              >
-
-              <span>
-                Publish this activity immediately
-              </span>
-
-            </label>
-
-          </div>
-
-
-          <!-- ERROR -->
-
-          <div
-            id="activity-form-error"
-            class="cess-form-error"
-            role="alert"
-            aria-live="polite"
-          ></div>
-
-
-          <!-- SUCCESS -->
-
-          <div
-            id="activity-form-success"
-            class="cess-form-success"
-            role="status"
-            aria-live="polite"
-          ></div>
-
-
-          <!-- ACTIONS -->
-
-          <div class="cess-modal-actions">
-
-            <button
-              type="button"
-              id="cancel-activity-btn"
-              class="cess-cancel-btn"
-            >
-              Cancel
-            </button>
-
-            <button
-              type="submit"
-              id="save-activity-btn"
-              class="cess-save-btn"
-            >
-              Add Activity
-            </button>
-
-          </div>
-
-
-        </form>
-
-      </div>
-
-    </div>
-
-  `;
-
-
-  document.body.appendChild(modal);
-
-
-  /* =======================================================
-     3. GET ELEMENTS
-  ======================================================= */
-
-  const overlay =
-    document.getElementById(
-      "cess-activity-overlay"
-    );
-
-  const form =
-    document.getElementById(
-      "cess-activity-form"
-    );
-
-  const closeButton =
-    document.getElementById(
-      "close-activity-modal"
-    );
-
-  const cancelButton =
-    document.getElementById(
-      "cancel-activity-btn"
-    );
-
-  const saveButton =
-    document.getElementById(
-      "save-activity-btn"
-    );
-
-  const errorElement =
-    document.getElementById(
-      "activity-form-error"
-    );
-
-  const successElement =
-    document.getElementById(
-      "activity-form-success"
-    );
-
-  const titleInput =
-    document.getElementById(
-      "activity-title"
-    );
-
-  const descriptionInput =
-    document.getElementById(
-      "activity-description"
-    );
-
-  const dateInput =
-    document.getElementById(
-      "activity-date"
-    );
-
-  const imageInput =
-    document.getElementById(
-      "activity-image"
-    );
-
-  const publishedInput =
-    document.getElementById(
-      "activity-published"
+  const tableBody =
+    document.getElementById("admin-users-table-body");
+
+  const usersContainer =
+    document.getElementById("admin-users-container");
+
+  const usersMessage =
+    document.getElementById("admin-users-message");
+
+
+  /*
+   * We support more than one possible ID so the function
+   * remains compatible with the existing admin page.
+   */
+
+  const body =
+    tableBody ||
+    document.querySelector(
+      "#users-table tbody"
+    ) ||
+    document.querySelector(
+      "#admin-users-table tbody"
     );
 
 
-  /* =======================================================
-     4. SAFETY CHECK
-  ======================================================= */
-
-  if (
-    !overlay ||
-    !form ||
-    !closeButton ||
-    !cancelButton ||
-    !saveButton ||
-    !errorElement ||
-    !successElement ||
-    !titleInput ||
-    !descriptionInput ||
-    !dateInput ||
-    !imageInput ||
-    !publishedInput
-  ) {
+  if (!body) {
 
     console.error(
-      "CESS: Activity modal elements are missing."
+      "CESS ADMIN: Users table body was not found."
     );
 
-    if (modal) {
-      modal.remove();
+    if (usersMessage) {
+
+      usersMessage.textContent =
+        "Users table was not found.";
+
     }
 
     return;
@@ -327,601 +57,652 @@ function openNewActivityForm() {
 
 
   /* =======================================================
-     5. HELPER — SHOW ERROR
+     LOADING
   ======================================================= */
 
-  function showError(message) {
+  body.innerHTML = `
+    <tr>
+      <td
+        colspan="5"
+        style="text-align:center;padding:25px;"
+      >
+        Loading users...
+      </td>
+    </tr>
+  `;
 
-    successElement.textContent = "";
-    successElement.classList.remove("visible");
 
-    errorElement.textContent =
-      message || "Something went wrong.";
+  /* =======================================================
+     FIREBASE CHECK
+  ======================================================= */
 
-    errorElement.classList.add("visible");
+  if (
+    typeof db === "undefined" ||
+    typeof auth === "undefined"
+  ) {
+
+    console.error(
+      "CESS ADMIN: Firebase is not initialized."
+    );
+
+    body.innerHTML = `
+      <tr>
+        <td
+          colspan="5"
+          style="text-align:center;padding:25px;"
+        >
+          Firebase is not initialized.
+        </td>
+      </tr>
+    `;
+
+    return;
 
   }
 
 
   /* =======================================================
-     6. HELPER — SHOW SUCCESS
+     AUTH CHECK
   ======================================================= */
 
-  function showSuccess(message) {
+  const currentUser =
+    auth.currentUser;
 
-    errorElement.textContent = "";
-    errorElement.classList.remove("visible");
 
-    successElement.textContent =
-      message || "Activity added successfully.";
+  if (!currentUser) {
 
-    successElement.classList.add("visible");
+    body.innerHTML = `
+      <tr>
+        <td
+          colspan="5"
+          style="text-align:center;padding:25px;"
+        >
+          Please log in again.
+        </td>
+      </tr>
+    `;
+
+    return;
 
   }
 
 
   /* =======================================================
-     7. HELPER — CLEAR MESSAGES
+     LOAD USERS
   ======================================================= */
 
-  function clearMessages() {
+  try {
 
-    errorElement.textContent = "";
-    errorElement.classList.remove("visible");
+    const snapshot =
+      await db
+        .collection(
+          CESS_CONFIG.collections.USERS
+        )
+        .get();
 
-    successElement.textContent = "";
-    successElement.classList.remove("visible");
 
-  }
+    console.log(
+      "CESS ADMIN: Users loaded:",
+      snapshot.size
+    );
 
 
-  /* =======================================================
-     8. CLOSE MODAL
-  ======================================================= */
+    /* =====================================================
+       NO USERS
+    ===================================================== */
 
-  let modalClosed = false;
+    if (snapshot.empty) {
 
-  function closeModal() {
+      body.innerHTML = `
+        <tr>
+          <td
+            colspan="5"
+            style="text-align:center;padding:25px;"
+          >
+            No registered users yet.
+          </td>
+        </tr>
+      `;
 
-    if (modalClosed) {
       return;
-    }
-
-    modalClosed = true;
-
-    const currentModal =
-      document.getElementById(
-        "cess-activity-modal"
-      );
-
-    if (currentModal) {
-      currentModal.remove();
-    }
-
-  }
-
-
-  /* =======================================================
-     9. CLOSE EVENTS
-  ======================================================= */
-
-  closeButton.addEventListener(
-    "click",
-    function () {
-
-      if (!saveButton.disabled) {
-        closeModal();
-      }
-
-    }
-  );
-
-
-  cancelButton.addEventListener(
-    "click",
-    function () {
-
-      if (!saveButton.disabled) {
-        closeModal();
-      }
-
-    }
-  );
-
-
-  overlay.addEventListener(
-    "click",
-    function (event) {
-
-      if (
-        event.target === overlay &&
-        !saveButton.disabled
-      ) {
-
-        closeModal();
-
-      }
-
-    }
-  );
-
-
-  /* =======================================================
-     10. ESC KEY
-  ======================================================= */
-
-  function handleEscape(event) {
-
-    if (
-      event.key === "Escape" &&
-      !saveButton.disabled
-    ) {
-
-      closeModal();
-
-      document.removeEventListener(
-        "keydown",
-        handleEscape
-      );
 
     }
 
-  }
+
+    /* =====================================================
+       BUILD USERS
+    ===================================================== */
+
+    const users = [];
 
 
-  document.addEventListener(
-    "keydown",
-    handleEscape
-  );
+    snapshot.forEach(
+      function (doc) {
+
+        const data =
+          doc.data() || {};
 
 
-  /* =======================================================
-     11. SUBMIT
-  ======================================================= */
+        users.push({
 
-  form.addEventListener(
-    "submit",
-    async function (event) {
+          uid:
+            doc.id,
 
-      event.preventDefault();
+          name:
+            data.name ||
+            data.fullName ||
+            "Unnamed User",
 
+          email:
+            data.email ||
+            "—",
 
-      /* -----------------------------------------------
-         CLEAR OLD MESSAGES
-      ----------------------------------------------- */
+          batch:
+            data.batch ||
+            "—",
 
-      clearMessages();
+          role:
+            data.role ||
+            "member",
 
+          createdAt:
+            data.createdAt ||
+            null
 
-      /* -----------------------------------------------
-         PREVENT DOUBLE SUBMISSION
-      ----------------------------------------------- */
-
-      if (saveButton.disabled) {
-        return;
-      }
-
-
-      /* -----------------------------------------------
-         CHECK FIREBASE
-      ----------------------------------------------- */
-
-      if (
-        typeof firebase === "undefined" ||
-        typeof auth === "undefined" ||
-        typeof db === "undefined"
-      ) {
-
-        showError(
-          "Firebase is not initialized correctly."
-        );
-
-        return;
+        });
 
       }
+    );
 
 
-      /* -----------------------------------------------
-         READ VALUES
-      ----------------------------------------------- */
+    /* =====================================================
+       SORT USERS
+    ===================================================== */
 
-      const title =
-        titleInput.value.trim();
+    users.sort(
+      function (a, b) {
 
-      const description =
-        descriptionInput.value.trim();
+        const nameA =
+          String(a.name)
+            .toLowerCase();
 
-      const date =
-        dateInput.value;
+        const nameB =
+          String(b.name)
+            .toLowerCase();
 
-      const image =
-        imageInput.value.trim();
-
-      const published =
-        publishedInput.checked;
-
-
-      /* -----------------------------------------------
-         VALIDATE TITLE
-      ----------------------------------------------- */
-
-      if (!title) {
-
-        showError(
-          "Please enter the activity title."
+        return nameA.localeCompare(
+          nameB
         );
-
-        titleInput.focus();
-
-        return;
 
       }
+    );
 
 
-      /* -----------------------------------------------
-         VALIDATE DESCRIPTION
-      ----------------------------------------------- */
+    /* =====================================================
+       CLEAR TABLE
+    ===================================================== */
 
-      if (!description) {
+    body.innerHTML = "";
 
-        showError(
-          "Please enter the activity description."
-        );
 
-        descriptionInput.focus();
+    /* =====================================================
+       RENDER USERS
+    ===================================================== */
 
-        return;
+    users.forEach(
+      function (user) {
 
-      }
+        const row =
+          document.createElement("tr");
 
 
-      /* -----------------------------------------------
-         VALIDATE DATE
-      ----------------------------------------------- */
+        /* -------------------------------------------------
+           NAME
+        ------------------------------------------------- */
 
-      if (!date) {
+        const nameCell =
+          document.createElement("td");
 
-        showError(
-          "Please select the activity date."
-        );
+        nameCell.textContent =
+          user.name;
 
-        dateInput.focus();
 
-        return;
+        /* -------------------------------------------------
+           EMAIL
+        ------------------------------------------------- */
 
-      }
+        const emailCell =
+          document.createElement("td");
 
+        emailCell.textContent =
+          user.email;
 
-      /* -----------------------------------------------
-         VALIDATE IMAGE URL
-      ----------------------------------------------- */
 
-      if (image) {
+        /* -------------------------------------------------
+           BATCH
+        ------------------------------------------------- */
 
-        try {
+        const batchCell =
+          document.createElement("td");
 
-          const imageURL =
-            new URL(image);
+        batchCell.textContent =
+          user.batch;
 
-          if (
-            imageURL.protocol !== "http:" &&
-            imageURL.protocol !== "https:"
-          ) {
 
-            showError(
-              "Please enter a valid image URL."
-            );
+        /* -------------------------------------------------
+           ROLE
+        ------------------------------------------------- */
 
-            imageInput.focus();
+        const roleCell =
+          document.createElement("td");
 
-            return;
 
-          }
+        const roleSelect =
+          document.createElement("select");
 
-        } catch (urlError) {
+        roleSelect.className =
+          "cess-role-select";
 
-          showError(
-            "Please enter a valid image URL."
-          );
 
-          imageInput.focus();
+        roleSelect.innerHTML = `
 
-          return;
+          <option
+            value="member"
+            ${
+              user.role === "member"
+                ? "selected"
+                : ""
+            }
+          >
+            Member
+          </option>
 
-        }
+          <option
+            value="leadership"
+            ${
+              user.role === "leadership"
+                ? "selected"
+                : ""
+            }
+          >
+            Leadership
+          </option>
 
-      }
+          <option
+            value="admin"
+            ${
+              user.role === "admin"
+                ? "selected"
+                : ""
+            }
+          >
+            Admin
+          </option>
 
+        `;
 
-      /* -----------------------------------------------
-         CHECK CURRENT USER
-      ----------------------------------------------- */
 
-      const currentUser =
-        auth.currentUser;
-
-
-      if (!currentUser) {
-
-        showError(
-          "Your session has expired. Please log in again."
-        );
-
-        return;
-
-      }
-
-
-      /* -----------------------------------------------
-         CHECK CESS CONFIG
-      ----------------------------------------------- */
-
-      if (
-        typeof CESS_CONFIG === "undefined" ||
-        !CESS_CONFIG.collections ||
-        !CESS_CONFIG.collections.ACTIVITIES
-      ) {
-
-        showError(
-          "CESS configuration is missing."
-        );
-
-        console.error(
-          "CESS_CONFIG.collections.ACTIVITIES is missing."
-        );
-
-        return;
-
-      }
-
-
-      /* -----------------------------------------------
-         LOCK FORM
-      ----------------------------------------------- */
-
-      saveButton.disabled = true;
-
-      cancelButton.disabled = true;
-
-      closeButton.disabled = true;
-
-      saveButton.textContent =
-        "Adding...";
-
-
-      /* =================================================
-         CREATE ACTIVITY DATA
-      ================================================= */
-
-      const activityData = {
-
-        title: title,
-
-        description: description,
-
-        date: date,
-
-        published: published,
-
-        createdAt:
-          firebase.firestore.FieldValue
-            .serverTimestamp(),
-
-        updatedAt:
-          firebase.firestore.FieldValue
-            .serverTimestamp(),
-
-        createdBy:
-          currentUser.uid
-
-      };
-
-
-      /* -----------------------------------------------
-         OPTIONAL IMAGE
-      ----------------------------------------------- */
-
-      if (image) {
-
-        activityData.image =
-          image;
-
-      }
-
-
-      /* =================================================
-         SAVE TO FIRESTORE
-      ================================================= */
-
-      try {
-
-        const docRef =
-          await db
-            .collection(
-              CESS_CONFIG.collections.ACTIVITIES
-            )
-            .add(
-              activityData
-            );
-
-
-        console.log(
-          "CESS — ACTIVITY CREATED:",
-          docRef.id
-        );
-
-
-        /* ---------------------------------------------
-           SHOW SUCCESS
-        --------------------------------------------- */
-
-        showSuccess(
-          "Activity added successfully."
-        );
-
-
-        saveButton.textContent =
-          "Added";
-
-
-        /* ---------------------------------------------
-           REFRESH ACTIVITIES TABLE
-        --------------------------------------------- */
+        /*
+         * Prevent changing the currently logged-in
+         * admin's own role.
+         */
 
         if (
-          typeof loadAdminActivitiesTable ===
-          "function"
+          user.uid ===
+          currentUser.uid
         ) {
 
-          try {
+          roleSelect.disabled =
+            true;
 
-            await loadAdminActivitiesTable();
-
-          } catch (tableError) {
-
-            /*
-             * IMPORTANT:
-             *
-             * The activity was already successfully
-             * saved. A table-refresh error must NOT
-             * make the user think the activity failed.
-             */
-
-            console.error(
-              "CESS — ACTIVITIES TABLE REFRESH ERROR:",
-              tableError
-            );
-
-          }
+          roleSelect.title =
+            "You cannot change your own admin role.";
 
         }
 
 
-        /* ---------------------------------------------
-           CLOSE AFTER SUCCESS
-        --------------------------------------------- */
+        roleCell.appendChild(
+          roleSelect
+        );
 
-        setTimeout(
+
+        /* -------------------------------------------------
+           ACTION
+        ------------------------------------------------- */
+
+        const actionCell =
+          document.createElement("td");
+
+
+        const saveButton =
+          document.createElement("button");
+
+
+        saveButton.type =
+          "button";
+
+        saveButton.textContent =
+          "Save";
+
+        saveButton.className =
+          "cess-save-role-btn";
+
+
+        /*
+         * Current user cannot modify own role.
+         */
+
+        if (
+          user.uid ===
+          currentUser.uid
+        ) {
+
+          saveButton.disabled =
+            true;
+
+        }
+
+
+        /* =================================================
+           ROLE CHANGE
+        ================================================= */
+
+        roleSelect.addEventListener(
+          "change",
           function () {
 
-            document.removeEventListener(
-              "keydown",
-              handleEscape
-            );
+            saveButton.disabled =
+              false;
 
-            closeModal();
-
-          },
-          900
+          }
         );
 
 
-      } catch (error) {
+        /* =================================================
+           SAVE ROLE
+        ================================================= */
 
-        console.error(
-          "CESS — ADD ACTIVITY ERROR:",
-          error
+        saveButton.addEventListener(
+          "click",
+          async function () {
+
+            const newRole =
+              roleSelect.value;
+
+
+            /* ---------------------------------------------
+               VALID ROLE
+            --------------------------------------------- */
+
+            const validRoles = [
+              "member",
+              "leadership",
+              "admin"
+            ];
+
+
+            if (
+              !validRoles.includes(
+                newRole
+              )
+            ) {
+
+              alert(
+                "Invalid role selected."
+              );
+
+              return;
+
+            }
+
+
+            /* ---------------------------------------------
+               PREVENT SELF CHANGE
+            --------------------------------------------- */
+
+            if (
+              user.uid ===
+              currentUser.uid
+            ) {
+
+              alert(
+                "You cannot change your own role."
+              );
+
+              return;
+
+            }
+
+
+            /* ---------------------------------------------
+               CONFIRM
+            --------------------------------------------- */
+
+            const confirmed =
+              window.confirm(
+                `Change ${user.name}'s role to ${newRole}?`
+              );
+
+
+            if (!confirmed) {
+
+              return;
+
+            }
+
+
+            /* ---------------------------------------------
+               DISABLE
+            --------------------------------------------- */
+
+            saveButton.disabled =
+              true;
+
+            roleSelect.disabled =
+              true;
+
+            saveButton.textContent =
+              "Saving...";
+
+
+            /* ---------------------------------------------
+               UPDATE FIRESTORE
+            --------------------------------------------- */
+
+            try {
+
+              await db
+                .collection(
+                  CESS_CONFIG.collections.USERS
+                )
+                .doc(
+                  user.uid
+                )
+                .update({
+
+                  role:
+                    newRole
+
+                });
+
+
+              /* -------------------------------------------
+                 SUCCESS
+              ------------------------------------------- */
+
+              user.role =
+                newRole;
+
+
+              saveButton.textContent =
+                "Saved ✓";
+
+
+              console.log(
+                "CESS ADMIN: Role updated:",
+                user.uid,
+                newRole
+              );
+
+
+              setTimeout(
+                function () {
+
+                  saveButton.textContent =
+                    "Save";
+
+                  roleSelect.disabled =
+                    false;
+
+                  saveButton.disabled =
+                    true;
+
+                },
+                1200
+              );
+
+
+            } catch (error) {
+
+              console.error(
+                "CESS ADMIN: Role update error:",
+                error
+              );
+
+
+              /* -----------------------------------------
+                 ERROR
+              ----------------------------------------- */
+
+              roleSelect.disabled =
+                false;
+
+              saveButton.disabled =
+                false;
+
+              saveButton.textContent =
+                "Save";
+
+
+              if (
+                error &&
+                error.code ===
+                  "permission-denied"
+              ) {
+
+                alert(
+                  "Permission denied. Only an admin can change roles."
+                );
+
+              } else {
+
+                alert(
+                  error.message ||
+                  "Unable to update user role."
+                );
+
+              }
+
+            }
+
+          }
         );
 
 
-        /* ---------------------------------------------
-           FIREBASE ERROR MESSAGES
-        --------------------------------------------- */
-
-        let message =
-          "Unable to add activity.";
-
-
-        if (
-          error &&
-          error.code ===
-            "permission-denied"
-        ) {
-
-          message =
-            "You do not have permission to add activities.";
-
-        } else if (
-          error &&
-          error.code ===
-            "unauthenticated"
-        ) {
-
-          message =
-            "Your session has expired. Please log in again.";
-
-        } else if (
-          error &&
-          error.code ===
-            "failed-precondition"
-        ) {
-
-          message =
-            "Firestore is not ready. Please try again.";
-
-        } else if (
-          error &&
-          error.code ===
-            "unavailable"
-        ) {
-
-          message =
-            "Firebase is temporarily unavailable. Check your internet connection.";
-
-        } else if (
-          error &&
-          error.message
-        ) {
-
-          message =
-            error.message;
-
-        }
-
-
-        showError(
-          message
+        actionCell.appendChild(
+          saveButton
         );
 
 
-        /* ---------------------------------------------
-           UNLOCK FORM
-        --------------------------------------------- */
+        /* -------------------------------------------------
+           ADD CELLS
+        ------------------------------------------------- */
 
-        saveButton.disabled = false;
+        row.appendChild(
+          nameCell
+        );
 
-        cancelButton.disabled = false;
+        row.appendChild(
+          emailCell
+        );
 
-        closeButton.disabled = false;
+        row.appendChild(
+          batchCell
+        );
 
-        saveButton.textContent =
-          "Add Activity";
+        row.appendChild(
+          roleCell
+        );
+
+        row.appendChild(
+          actionCell
+        );
+
+
+        body.appendChild(
+          row
+        );
 
       }
+    );
+
+
+    /* =====================================================
+       UPDATE MESSAGE
+    ===================================================== */
+
+    if (usersMessage) {
+
+      usersMessage.textContent =
+        `${users.length} registered user${
+          users.length === 1
+            ? ""
+            : "s"
+        }.`;
 
     }
-  );
 
 
-  /* =======================================================
-     12. FOCUS TITLE
-  ======================================================= */
+    console.log(
+      "CESS ADMIN: Users table rendered successfully."
+    );
 
-  setTimeout(
-    function () {
 
-      if (
-        document.body.contains(
-          titleInput
-        )
-      ) {
+  } catch (error) {
 
-        titleInput.focus();
+    console.error(
+      "CESS ADMIN: Failed to load users:",
+      error
+    );
 
-      }
 
-    },
-    50
-  );
+    let message =
+      "Unable to load registered users.";
+
+
+    if (
+      error &&
+      error.code ===
+        "permission-denied"
+    ) {
+
+      message =
+        "Permission denied. Your account cannot read users.";
+
+    }
+
+
+    body.innerHTML = `
+      <tr>
+        <td
+          colspan="5"
+          style="text-align:center;padding:25px;"
+        >
+          ${message}
+        </td>
+      </tr>
+    `;
+
+  }
 
 }
