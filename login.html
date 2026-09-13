@@ -96,7 +96,7 @@
       errorEl.classList.add("visible");
     } catch (err) {
       errorEl.style.color = "var(--color-danger)";
-      errorEl.textContent = friendlyAuthError(err);
+errorEl.textContent = `${err.code} — ${err.message}`;
       errorEl.classList.add("visible");
     }
   });
