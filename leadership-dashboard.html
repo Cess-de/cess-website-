@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Leadership Dashboard — CESS</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/responsive.css">
+<link rel="stylesheet" href="css/dashboard.css">
+<script>
+  // Only leadership and admin can access this dashboard.
+  window.CESS_REQUIRED_ROLES = ['leadership', 'admin'];
+</script>
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="nav-bar">
+    <a href="index.html" class="brand">
+      <span class="brand-logo">CESS</span>
+      <span class="brand-text"><strong>CESS</strong><span>Civil Engineering Student Society</span></span>
+    </a>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="member-dashboard.html">Member view</a>
+      <span class="user-badge" style="border:none; padding:0;" data-user-name>…</span>
+      <button class="btn btn-secondary btn-small" onclick="cessLogout()">Log out</button>
+    </div>
+    <button class="nav-toggle" id="navToggle" aria-label="Open menu" aria-expanded="false"><span></span><span></span><span></span></button>
+  </nav>
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="index.html">Home</a>
+    <a href="member-dashboard.html">Member view</a>
+    <div class="user-badge" data-user-name>…</div>
+    <button class="btn btn-secondary btn-block" style="margin:0.75rem 1.5rem; width:calc(100% - 3rem);" onclick="cessLogout()">Log out</button>
+  </div>
+</header>
+
+<div class="dashboard-layout">
+  <aside class="dashboard-sidebar">
+    <div class="dashboard-sidebar-header">
+      <strong>Leadership Dashboard</strong>
+      <p>Signed in as <span data-user-name>…</span> (<span data-user-role>…</span>)</p>
+    </div>
+    <nav class="dashboard-nav">
+      <a href="#overview" class="nav-panel-link active" data-panel="panelOverview">Overview</a>
+      <a href="#activities" class="nav-panel-link" data-panel="panelActivities">Activities</a>
+      <a href="#announcements" class="nav-panel-link" data-panel="panelAnnouncements">Announcements</a>
+      <a href="#resources" class="nav-panel-link" data-panel="panelResources">Resources</a>
+      <a href="#archive" class="nav-panel-link" data-panel="panelArchive">Public Archive</a>
+      <a href="#committees" class="nav-panel-link" data-panel="panelCommittees">Committees</a>
+      <a href="#meetings" class="nav-panel-link" data-panel="panelMeetings">Meetings</a>
+      <a href="#reports" class="nav-panel-link" data-panel="panelReports">Reports</a>
+      <a href="#internal" class="nav-panel-link" data-panel="panelInternal">Internal Documents</a>
+      <a href="#handover" class="nav-panel-link" data-panel="panelHandover">Handover</a>
+      <a href="#users" class="nav-panel-link" data-panel="panelUsers">Users &amp; Roles</a>
+      <a href="#messages" class="nav-panel-link" data-panel="panelMessages">Contact Messages</a>
+    </nav>
+  </aside>
+
+  <main class="dashboard-main">
+
+    <!-- OVERVIEW -->
+    <div class="dashboard-panel active" id="panelOverview">
+      <div class="panel-head"><div><h2>Overview</h2><p>Current state of the society at a glance.</p></div></div>
+      <div class="overview-grid" id="overviewGrid">
+        <div class="overview-card"><div class="stat-number" id="ovMembers">—</div><div class="stat-label">Registered members</div></div>
+        <div class="overview-card"><div class="stat-number" id="ovActivities">—</div><div class="stat-label">Upcoming activities</div></div>
+        <div class="overview-card"><div class="stat-number" id="ovAnnouncements">—</div><div class="stat-label">Announcements</div></div>
+        <div class="overview-card"><div class="stat-number" id="ovDocuments">—</div><div class="stat-label">Internal documents</div></div>
+      </div>
+      <h3 class="mb-2">Recent activity</h3>
+      <div class="data-table-wrap">
+        <table class="data-table" id="recentTable">
+          <thead><tr><th>Type</th><th>Title</th><th>Date</th></tr></thead>
+          <tbody><tr><td colspan="3">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ACTIVITIES -->
+    <div class="dashboard-panel" id="panelActivities">
+      <div class="panel-head">
+        <div><h2>Activities</h2><p>Create and manage society activities.</p></div>
+        <button class="btn btn-primary" data-open-modal="modalActivity">+ New activity</button>
+      </div>
+      <div class="data-table-wrap"><table class="data-table" id="activitiesTable">
+        <thead><tr><th>Title</th><th>Category</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody><tr><td colspan="5">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+
+    <!-- ANNOUNCEMENTS -->
+    <div class="dashboard-panel" id="panelAnnouncements">
+      <div class="panel-head">
+        <div><h2>Announcements</h2><p>Notices for the public site and/or members only.</p></div>
+        <button class="btn btn-primary" data-open-modal="modalAnnouncement">+ New announcement</button>
+      </div>
+      <div class="data-table-wrap"><table class="data-table" id="announcementsTable">
+        <thead><tr><th>Title</th><th>Audience</th><th>Date</th><th>Actions</th></tr></thead>
+        <tbody><tr><td colspan="4">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+
+    <!-- RESOURCES -->
+    <div class="dashboard-panel" id="panelResources">
+      <div class="panel-head">
+        <div><h2>Resources</h2><p>Academic resources — link to Google Drive for large files.</p></div>
+        <button class="btn btn-primary" data-open-modal="modalResource">+ New resource</button>
+      </div>
+      <div class="data-table-wrap"><table class="data-table" id="resourcesTable">
+        <thead><tr><th>Title</th><th>Category</th><th>Visibility</th><th>Actions</th></tr></thead>
+        <tbody><tr><td colspan="4">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+
+    <!-- PUBLIC ARCHIVE -->
+    <div class="dashboard-panel" id="panelArchive">
+      <div class="panel-head">
+        <div><h2>Public archive</h2><p>Only documents added here appear on the public archive page.</p></div>
+        <button class="btn btn-primary" data-open-modal="modalArchive">+ Add to public archive</button>
+      </div>
+      <div class="data-table-wrap"><table class="data-table" id="archiveTable">
+        <thead><tr><th>Title</th><th>Category</th><th>Date</th><th>Actions</th></tr></thead>
+        <tbody><tr><td colspan="4">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+
+    <!-- COMMITTEES -->
+    <div class="dashboard-panel" id="panelCommittees">
+      <div class="panel-head">
+        <div><h2>Committees</h2><p>Committee rosters by term.</p></div>
+        <button class="btn btn-primary" data-open-modal="modalCommittee">+ New committee record</button>
+      </div>
+      <div class="data-table-wrap"><table class="data-table" id="committeesTable">
+        <thead><tr><th>Term</th><th>President</th><th>Vice President</th><th>Secretary</th><th>Actions</th></tr></thead>
+        <tbody><tr><td colspan="5">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+
+    <!-- MEETINGS (internal) -->
+    <div class="dashboard-panel" id="panelMeetings">
+      <div class="panel-head">
+        <div><h2>Meetings</h2><p>Internal — visible to leadership and admin only.</p></div>
+        <button class="btn btn-primary" data-open-modal="modalMeeting">+ New meeting record</button>
+      </div>
+      <div class="data-table-wrap"><table class="data-table" id="meetingsTable">
+        <thead><tr><th>Title</th><th>Date</th><th>Actions</th></tr></thead>
+        <tbody><tr><td colspan="3">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+
+    <!-- REPORTS (internal) -->
+    <div class="dashboard-panel" id="panelReports">
+      <div class="panel-head">
+        <div><h2>Reports</h2><p>Internal — visible to leadership and admin only.</p></div>
+        <button class="btn btn-primary" data-open-modal="modalReport">+ New report</button>
+      </div>
+      <div class="data-table-wrap"><table class="data-table" id="reportsTable">
+        <thead><tr><th>Title</th><th>Type</th><th>Date</th><th>Actions</th></tr></thead>
+        <tbody><tr><td colspan="4">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+
+    <!-- INTERNAL DOCUMENTS -->
+    <div class="dashboard-panel" id="panelInternal">
+      <div class="panel-head">
+        <div><h2>Internal documents</h2><p>Private leadership documents. Never shown on public pages.</p></div>
+        <button class="btn btn-primary" data-open-modal="modalInternal">+ New internal document</button>
+      </div>
+      <div class="data-table-wrap"><table class="data-table" id="internalTable">
+        <thead><tr><th>Title</th><th>Category</th><th>Actions</th></tr></thead>
+        <tbody><tr><td colspan="3">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+
+    <!-- HANDOVER -->
+    <div class="dashboard-panel" id="panelHandover">
+      <div class="panel-head">
+        <div><h2>Handover archive</h2><p>The structured package a future committee needs to continue CESS without starting over.</p></div>
+        <button class="btn btn-primary" data-open-modal="modalHandover">+ New handover entry</button>
+      </div>
+      <div class="data-table-wrap"><table class="data-table" id="handoverTable">
+        <thead><tr><th>Title</th><th>Type</th><th>Actions</th></tr></thead>
+        <tbody><tr><td colspan="3">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+
+    <!-- USERS & ROLES -->
+    <div class="dashboard-panel" id="panelUsers">
+      <div class="panel-head">
+        <div><h2>Users &amp; roles</h2><p>Admins only can change roles. Leadership can view membership.</p></div>
+      </div>
+      <div class="data-table-wrap"><table class="data-table" id="usersTable">
+        <thead><tr><th>Name</th><th>Email</th><th>Cohort</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody><tr><td colspan="6">Loading…</td></tr></tbody>
+      </table></div>
+      <p class="form-hint mt-2">Role changes are only permitted for admin accounts, and are enforced by Firestore Security Rules — this table will show a permission error for leadership-level accounts trying to change roles.</p>
+    </div>
+
+    <!-- CONTACT MESSAGES -->
+    <div class="dashboard-panel" id="panelMessages">
+      <div class="panel-head"><div><h2>Contact messages</h2><p>Messages submitted through the public contact form.</p></div></div>
+      <div class="data-table-wrap"><table class="data-table" id="messagesTable">
+        <thead><tr><th>Name</th><th>Email</th><th>Subject</th><th>Message</th><th>Date</th></tr></thead>
+        <tbody><tr><td colspan="5">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ============================ MODALS ============================ -->
+
+<div class="modal-overlay" id="modalActivity">
+  <div class="modal-box">
+    <div class="modal-box-head"><h3>New activity</h3><button class="modal-close" data-close-modal>&times;</button></div>
+    <form id="formActivity">
+      <div class="form-group"><label>Title</label><input type="text" name="title" required></div>
+      <div class="form-group"><label>Description</label><textarea name="description" required></textarea></div>
+      <div class="form-group"><label>Date</label><input type="date" name="date" required></div>
+      <div class="form-group"><label>Location</label><input type="text" name="location"></div>
+      <div class="form-group"><label>Category</label>
+        <select name="category">
+          <option>Academic</option><option>Training</option><option>Workshops</option>
+          <option>Competitions</option><option>Social</option><option>Community Service</option>
+          <option>Professional</option><option>Media</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Status</label>
+        <select name="status"><option value="upcoming">Upcoming</option><option value="ongoing">Ongoing</option><option value="past">Past</option></select>
+      </div>
+      <div class="form-group"><label>Image URL (optional)</label><input type="url" name="imageUrl"></div>
+      <div class="form-group"><label>Registration link (optional)</label><input type="url" name="registrationLink"></div>
+      <button type="submit" class="btn btn-primary btn-block">Save activity</button>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalAnnouncement">
+  <div class="modal-box">
+    <div class="modal-box-head"><h3>New announcement</h3><button class="modal-close" data-close-modal>&times;</button></div>
+    <form id="formAnnouncement">
+      <div class="form-group"><label>Title</label><input type="text" name="title" required></div>
+      <div class="form-group"><label>Body</label><textarea name="body" required></textarea></div>
+      <div class="form-group"><label>Audience</label>
+        <select name="audience"><option value="public">Public</option><option value="member">Members only</option></select>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">Publish announcement</button>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalResource">
+  <div class="modal-box">
+    <div class="modal-box-head"><h3>New resource</h3><button class="modal-close" data-close-modal>&times;</button></div>
+    <form id="formResource">
+      <div class="form-group"><label>Title</label><input type="text" name="title" required></div>
+      <div class="form-group"><label>Description</label><textarea name="description"></textarea></div>
+      <div class="form-group"><label>Category</label>
+        <select name="category">
+          <option value="Books">Engineering Books</option><option value="Lecture Notes">Lecture Notes</option>
+          <option value="Course Materials">Course Materials</option><option value="Software">Engineering Software</option>
+          <option value="Articles">Articles</option><option value="Websites">Useful Websites</option>
+          <option value="Training">Training Materials</option><option value="References">References</option>
+        </select>
+      </div>
+      <div class="form-group"><label>File / Drive link</label><input type="url" name="fileUrl" required></div>
+      <div class="form-group"><label>Visibility</label>
+        <select name="visibility"><option value="public">Public</option><option value="member">Members only</option></select>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">Save resource</button>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalArchive">
+  <div class="modal-box">
+    <div class="modal-box-head"><h3>Add to public archive</h3><button class="modal-close" data-close-modal>&times;</button></div>
+    <form id="formArchive">
+      <div class="form-group"><label>Title</label><input type="text" name="title" required></div>
+      <div class="form-group"><label>Description</label><textarea name="description"></textarea></div>
+      <div class="form-group"><label>Category</label>
+        <select name="category">
+          <option>Constitution</option><option>Regulations</option><option>Previous Committees</option>
+          <option>Historical Documents</option><option>Previous Activities</option><option>Public Reports</option>
+          <option>Society Media</option><option>Announcements</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Google Drive link</label><input type="url" name="driveLink" required></div>
+      <p class="form-hint">Only add documents that are safe and intended for the general public.</p>
+      <button type="submit" class="btn btn-primary btn-block">Publish to public archive</button>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalCommittee">
+  <div class="modal-box">
+    <div class="modal-box-head"><h3>New committee record</h3><button class="modal-close" data-close-modal>&times;</button></div>
+    <form id="formCommittee">
+      <div class="form-group"><label>Term (e.g. 2026–2027)</label><input type="text" name="term" required></div>
+      <div class="form-group"><label>President</label><input type="text" name="president"></div>
+      <div class="form-group"><label>Vice President</label><input type="text" name="vicePresident"></div>
+      <div class="form-group"><label>Secretary</label><input type="text" name="secretary"></div>
+      <div class="form-group"><label>Media lead</label><input type="text" name="media"></div>
+      <div class="form-group"><label>Finance lead</label><input type="text" name="finance"></div>
+      <div class="form-group"><label>Other positions (free text)</label><textarea name="otherPositions"></textarea></div>
+      <button type="submit" class="btn btn-primary btn-block">Save committee</button>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalMeeting">
+  <div class="modal-box">
+    <div class="modal-box-head"><h3>New meeting record</h3><button class="modal-close" data-close-modal>&times;</button></div>
+    <form id="formMeeting">
+      <div class="form-group"><label>Meeting title</label><input type="text" name="title" required></div>
+      <div class="form-group"><label>Date</label><input type="date" name="date" required></div>
+      <div class="form-group"><label>Attendees</label><input type="text" name="attendees" placeholder="Comma-separated names"></div>
+      <div class="form-group"><label>Agenda</label><textarea name="agenda"></textarea></div>
+      <div class="form-group"><label>Decisions</label><textarea name="decisions"></textarea></div>
+      <div class="form-group"><label>Minutes</label><textarea name="minutes"></textarea></div>
+      <div class="form-group"><label>Attachments (Drive link)</label><input type="url" name="attachments"></div>
+      <button type="submit" class="btn btn-primary btn-block">Save meeting record</button>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalReport">
+  <div class="modal-box">
+    <div class="modal-box-head"><h3>New report</h3><button class="modal-close" data-close-modal>&times;</button></div>
+    <form id="formReport">
+      <div class="form-group"><label>Report title</label><input type="text" name="title" required></div>
+      <div class="form-group"><label>Type</label><input type="text" name="type" placeholder="e.g. Financial, Activity, Term"></div>
+      <div class="form-group"><label>Date</label><input type="date" name="date" required></div>
+      <div class="form-group"><label>Description</label><textarea name="description"></textarea></div>
+      <div class="form-group"><label>File link (Drive)</label><input type="url" name="fileUrl"></div>
+      <button type="submit" class="btn btn-primary btn-block">Save report</button>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalInternal">
+  <div class="modal-box">
+    <div class="modal-box-head"><h3>New internal document</h3><button class="modal-close" data-close-modal>&times;</button></div>
+    <form id="formInternal">
+      <div class="form-group"><label>Title</label><input type="text" name="title" required></div>
+      <div class="form-group"><label>Category</label><input type="text" name="category" placeholder="e.g. Administration, Plans"></div>
+      <div class="form-group"><label>Drive link</label><input type="url" name="driveLink" required></div>
+      <div class="form-group"><label>Notes</label><textarea name="notes"></textarea></div>
+      <button type="submit" class="btn btn-primary btn-block">Save internal document</button>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalHandover">
+  <div class="modal-box">
+    <div class="modal-box-head"><h3>New handover entry</h3><button class="modal-close" data-close-modal>&times;</button></div>
+    <form id="formHandover">
+      <div class="form-group"><label>Title</label><input type="text" name="title" required></div>
+      <div class="form-group"><label>Type</label>
+        <select name="type">
+          <option>Current committee</option><option>Previous committee</option><option>Important contacts</option>
+          <option>Plans</option><option>Reports</option><option>Meeting records</option>
+          <option>Administrative information</option><option>Archive links</option><option>Instructions</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Details</label><textarea name="details"></textarea></div>
+      <div class="form-group"><label>Related link (Drive, optional)</label><input type="url" name="link"></div>
+      <button type="submit" class="btn btn-primary btn-block">Save handover entry</button>
+    </form>
+  </div>
+</div>
+
+<script src="js/firebase-config.js" type="module"></script>
+<script src="js/user.js" type="module"></script>
+<script src="js/auth.js" type="module"></script>
+<script src="js/auth-guard.js" type="module"></script>
+<script src="js/leadership-dashboard.js" type="module"></script>
+<script>
+  const navToggle = document.getElementById('navToggle');
+  const mobileMenu = document.getElementById('mobileMenu');
+  navToggle.addEventListener('click', () => {
+    const isOpen = mobileMenu.classList.toggle('open');
+    navToggle.setAttribute('aria-expanded', isOpen);
+  });
+
+  document.querySelectorAll('.nav-panel-link').forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      document.querySelectorAll('.nav-panel-link').forEach(l => l.classList.remove('active'));
+      document.querySelectorAll('.dashboard-panel').forEach(p => p.classList.remove('active'));
+      link.classList.add('active');
+      document.getElementById(link.dataset.panel).classList.add('active');
+    });
+  });
+
+  document.querySelectorAll('[data-open-modal]').forEach(btn => {
+    btn.addEventListener('click', () => document.getElementById(btn.dataset.openModal).classList.add('open'));
+  });
+  document.querySelectorAll('[data-close-modal]').forEach(btn => {
+    btn.addEventListener('click', () => btn.closest('.modal-overlay').classList.remove('open'));
+  });
+  document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.classList.remove('open'); });
+  });
+</script>
+</body>
+</html>

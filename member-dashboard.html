@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Member Dashboard — CESS</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/responsive.css">
+<link rel="stylesheet" href="css/dashboard.css">
+<script>
+  // Members, leadership, and admin can all view the member dashboard.
+  window.CESS_REQUIRED_ROLES = ['member', 'leadership', 'admin'];
+</script>
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="nav-bar">
+    <a href="index.html" class="brand">
+      <span class="brand-logo">CESS</span>
+      <span class="brand-text"><strong>CESS</strong><span>Civil Engineering Student Society</span></span>
+    </a>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="activities.html">Activities</a>
+      <a href="resources.html">Resources</a>
+      <span class="user-badge" style="border:none; padding:0;" data-user-name>…</span>
+      <button class="btn btn-secondary btn-small" onclick="cessLogout()">Log out</button>
+    </div>
+    <button class="nav-toggle" id="navToggle" aria-label="Open menu" aria-expanded="false"><span></span><span></span><span></span></button>
+  </nav>
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="index.html">Home</a>
+    <a href="activities.html">Activities</a>
+    <a href="resources.html">Resources</a>
+    <div class="user-badge" data-user-name>…</div>
+    <button class="btn btn-secondary btn-block" style="margin:0.75rem 1.5rem; width:calc(100% - 3rem);" onclick="cessLogout()">Log out</button>
+  </div>
+</header>
+
+<div class="dashboard-layout">
+  <aside class="dashboard-sidebar">
+    <div class="dashboard-sidebar-header">
+      <strong>Member Dashboard</strong>
+      <p>Signed in as <span data-user-name>…</span></p>
+    </div>
+    <nav class="dashboard-nav">
+      <a href="#overview" class="nav-panel-link active" data-panel="panelOverview">Overview</a>
+      <a href="#announcements" class="nav-panel-link" data-panel="panelAnnouncements">Announcements</a>
+      <a href="#activities" class="nav-panel-link" data-panel="panelActivities">Upcoming activities</a>
+      <a href="#resources" class="nav-panel-link" data-panel="panelResources">Member resources</a>
+      <a href="#profile" class="nav-panel-link" data-panel="panelProfile">My profile</a>
+    </nav>
+  </aside>
+
+  <main class="dashboard-main">
+
+    <div class="dashboard-panel active" id="panelOverview">
+      <div class="welcome-banner">
+        <h2>Welcome back, <span data-user-name>member</span>.</h2>
+        <p>Here's what's happening in CESS right now.</p>
+      </div>
+      <div class="panel-head">
+        <div>
+          <h2>Society information</h2>
+          <p>Quick summary of society activity.</p>
+        </div>
+      </div>
+      <div class="grid grid-cards" id="overviewSummary">
+        <div class="state-block"><div class="spinner"></div>Loading…</div>
+      </div>
+    </div>
+
+    <div class="dashboard-panel" id="panelAnnouncements">
+      <div class="panel-head">
+        <div><h2>Announcements</h2><p>Notices for members and the wider student body.</p></div>
+      </div>
+      <div class="grid grid-cards" id="memberAnnouncements">
+        <div class="state-block"><div class="spinner"></div>Loading announcements…</div>
+      </div>
+    </div>
+
+    <div class="dashboard-panel" id="panelActivities">
+      <div class="panel-head">
+        <div><h2>Upcoming activities</h2><p>Activities you can take part in.</p></div>
+      </div>
+      <div class="grid grid-cards" id="memberActivities">
+        <div class="state-block"><div class="spinner"></div>Loading activities…</div>
+      </div>
+    </div>
+
+    <div class="dashboard-panel" id="panelResources">
+      <div class="panel-head">
+        <div><h2>Member resources</h2><p>Includes public resources and resources visible to members only.</p></div>
+      </div>
+      <div class="grid grid-cards" id="memberResources">
+        <div class="state-block"><div class="spinner"></div>Loading resources…</div>
+      </div>
+    </div>
+
+    <div class="dashboard-panel" id="panelProfile">
+      <div class="panel-head">
+        <div><h2>My profile</h2><p>Your membership information on record.</p></div>
+      </div>
+      <div class="card" style="max-width:480px;">
+        <div class="profile-field"><span>Name</span><span data-user-name>—</span></div>
+        <div class="profile-field"><span>Email</span><span id="profileEmail">—</span></div>
+        <div class="profile-field"><span>Cohort</span><span id="profileCohort">—</span></div>
+        <div class="profile-field"><span>Department</span><span id="profileDepartment">—</span></div>
+        <div class="profile-field"><span>Role</span><span data-user-role>—</span></div>
+        <div class="profile-field"><span>Status</span><span id="profileStatus">—</span></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="js/firebase-config.js" type="module"></script>
+<script src="js/user.js" type="module"></script>
+<script src="js/auth.js" type="module"></script>
+<script src="js/auth-guard.js" type="module"></script>
+<script src="js/member-dashboard.js" type="module"></script>
+<script>
+  const navToggle = document.getElementById('navToggle');
+  const mobileMenu = document.getElementById('mobileMenu');
+  navToggle.addEventListener('click', () => {
+    const isOpen = mobileMenu.classList.toggle('open');
+    navToggle.setAttribute('aria-expanded', isOpen);
+  });
+
+  document.querySelectorAll('.nav-panel-link').forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      document.querySelectorAll('.nav-panel-link').forEach(l => l.classList.remove('active'));
+      document.querySelectorAll('.dashboard-panel').forEach(p => p.classList.remove('active'));
+      link.classList.add('active');
+      document.getElementById(link.dataset.panel).classList.add('active');
+    });
+  });
+</script>
+</body>
+</html>
