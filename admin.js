@@ -31,9 +31,11 @@ async function loadAdminActivitiesTable() {
       });
     });
 
-    // ترتيب الأنشطة حسب التاريخ من الأحدث إلى الأقدم
+    // ترتيب الأنشطة من الأحدث إلى الأقدم
     activities.sort((a, b) => {
-      return String(b.date || "").localeCompare(String(a.date || ""));
+      return String(b.date || "").localeCompare(
+        String(a.date || "")
+      );
     });
 
     tbody.innerHTML = "";
@@ -41,7 +43,10 @@ async function loadAdminActivitiesTable() {
     activities.forEach((activity) => {
       const row = document.createElement("tr");
 
-      const title = pickLang(activity, "title") || "Untitled activity";
+      const title =
+        pickLang(activity, "title") ||
+        "Untitled activity";
+
       const date = activity.date
         ? formatDate(activity.date)
         : "—";
@@ -52,11 +57,7 @@ async function loadAdminActivitiesTable() {
         <td>${date}</td>
 
         <td>
-          ${
-            activity.published
-              ? "✅"
-              : "—"
-          }
+          ${activity.published ? "✅" : "—"}
         </td>
 
         <td>
@@ -88,7 +89,6 @@ async function loadAdminActivitiesTable() {
     tbody
       .querySelectorAll(".toggle-publish-btn")
       .forEach((btn) => {
-
         btn.addEventListener("click", async () => {
           const id = btn.getAttribute("data-id");
 
@@ -126,7 +126,6 @@ async function loadAdminActivitiesTable() {
     tbody
       .querySelectorAll(".delete-activity-btn")
       .forEach((btn) => {
-
         btn.addEventListener("click", async () => {
           const id = btn.getAttribute("data-id");
 
@@ -161,10 +160,18 @@ async function loadAdminActivitiesTable() {
       });
 
   } catch (err) {
-
     console.error(
       "Failed to load activities:",
       err
+    );
+
+    alert(
+      "ACTIVITIES ERROR\n\n" +
+      "Code: " +
+      (err.code || "unknown") +
+      "\n\n" +
+      "Message: " +
+      (err.message || "No message")
     );
 
     tbody.innerHTML = `
