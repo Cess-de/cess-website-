@@ -1,1208 +1,552 @@
 /* =========================================================
-   CESS — ADMIN DASHBOARD
+   ADD NEW ACTIVITY — ADMIN
    ========================================================= */
 
-/* ---------------------------------------------------------
-   Helpers
---------------------------------------------------------- */
+function openNewActivityForm() {
 
-function escapeAdminHtml(value) {
-  if (value === null || value === undefined) {
-    return "";
+  // منع فتح أكثر من نافذة في نفس الوقت
+  const existingModal =
+    document.getElementById("cess-activity-modal");
+
+  if (existingModal) {
+    existingModal.remove();
   }
 
-  return String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
+  /* -------------------------------------------------------
+     Create Modal
+  ------------------------------------------------------- */
 
+  const modal =
+    document.createElement("div");
 
-/* ---------------------------------------------------------
-   Activity Date Helpers
---------------------------------------------------------- */
+  modal.id =
+    "cess-activity-modal";
 
-function getActivityDateValue(date) {
-  if (!date) return 0;
+  modal.innerHTML = `
+    <div
+      class="cess-modal-overlay"
+      id="cess-activity-overlay"
+    >
 
-  // Firestore Timestamp
-  if (date && typeof date.toDate === "function") {
-    const converted = date.toDate();
+      <div class="cess-modal">
 
-    if (converted instanceof Date && !isNaN(converted.getTime())) {
-      return converted.getTime();
-    }
+        <div class="cess-modal-header">
 
-    return 0;
-  }
+          <h2>
+            Add New Activity
+          </h2>
 
-  // JavaScript Date
-  if (date instanceof Date) {
-    return isNaN(date.getTime()) ? 0 : date.getTime();
-  }
-
-  // String مثل:
-  // 2026-09-12
-  // 2026-09-12T10:00:00
-  const parsed = new Date(date);
-
-  if (!isNaN(parsed.getTime())) {
-    return parsed.getTime();
-  }
-
-  return 0;
-}
-
-
-function formatActivityDate(date) {
-  if (!date) {
-    return "—";
-  }
-
-  let actualDate = null;
-
-  // Firestore Timestamp
-  if (date && typeof date.toDate === "function") {
-    actualDate = date.toDate();
-
-  // JavaScript Date
-  } else if (date instanceof Date) {
-    actualDate = date;
-
-  // String
-  } else {
-    actualDate = new Date(date);
-  }
-
-  if (!actualDate || isNaN(actualDate.getTime())) {
-    return String(date);
-  }
-
-  return actualDate.toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric"
-  });
-}
-
-
-/* ---------------------------------------------------------
-   USERS & ROLES
---------------------------------------------------------- */
-
-async function loadUsersTable() {
-  const tableBody = document.getElementById("users-table");
-
-  if (!tableBody) return;
-
-  tableBody.innerHTML = `
-    <tr>
-      <td colspan="5">Loading users...</td>
-    </tr>
-  `;
-
-  try {
-    const currentUser = auth.currentUser;
-
-    if (!currentUser) {
-      tableBody.innerHTML = `
-        <tr>
-          <td colspan="5">You are not signed in.</td>
-        </tr>
-      `;
-      return;
-    }
-
-    const snapshot = await db
-      .collection(CESS_CONFIG.collections.USERS)
-      .get();
-
-    console.log("CESS USERS COUNT:", snapshot.size);
-
-    if (snapshot.empty) {
-      tableBody.innerHTML = `
-        <tr>
-          <td colspan="5">No users found.</td>
-        </tr>
-      `;
-      return;
-    }
-
-    tableBody.innerHTML = "";
-
-    snapshot.forEach((doc) => {
-      const user = doc.data();
-      const uid = doc.id;
-
-      const name = user.name || "—";
-      const email = user.email || "—";
-      const batch = user.batch || "—";
-      const role = user.role || CESS_CONFIG.roles.MEMBER;
-
-      const isCurrentAdmin = uid === currentUser.uid;
-
-      const row = document.createElement("tr");
-
-      row.innerHTML = `
-        <td>${escapeAdminHtml(name)}</td>
-
-        <td>${escapeAdminHtml(email)}</td>
-
-        <td>${escapeAdminHtml(batch)}</td>
-
-        <td>
-          <select
-            class="user-role-select"
-            data-user-id="${escapeAdminHtml(uid)}"
-            ${isCurrentAdmin ? "disabled" : ""}
-          >
-            <option value="member" ${role === "member" ? "selected" : ""}>
-              Member
-            </option>
-
-            <option value="leadership" ${role === "leadership" ? "selected" : ""}>
-              Leadership
-            </option>
-
-            <option value="admin" ${role === "admin" ? "selected" : ""}>
-              Admin
-            </option>
-          </select>
-        </td>
-
-        <td>
-          ${
-            isCurrentAdmin
-              ? `<span>Current Admin</span>`
-              : `
-                <button
-                  class="admin-action-btn save-role-btn"
-                  data-user-id="${escapeAdminHtml(uid)}"
-                >
-                  Save
-                </button>
-              `
-          }
-        </td>
-      `;
-
-      tableBody.appendChild(row);
-    });
-
-    tableBody.querySelectorAll(".save-role-btn").forEach((button) => {
-      button.addEventListener("click", async () => {
-        const uid = button.dataset.userId;
-
-        const select = tableBody.querySelector(
-          `.user-role-select[data-user-id="${uid}"]`
-        );
-
-        if (!select) return;
-
-        const newRole = select.value;
-
-        try {
-          button.disabled = true;
-          button.textContent = "Saving...";
-
-          await db
-            .collection(CESS_CONFIG.collections.USERS)
-            .doc(uid)
-            .update({
-              role: newRole
-            });
-
-          button.textContent = "Saved";
-
-          setTimeout(() => {
-            button.textContent = "Save";
-            button.disabled = false;
-          }, 1200);
-
-        } catch (err) {
-          console.error("ROLE UPDATE ERROR:", err);
-
-          alert(
-            `${err.code || "Error"} — ${
-              err.message || "Unable to update role."
-            }`
-          );
-
-          button.textContent = "Save";
-          button.disabled = false;
-        }
-      });
-    });
-
-  } catch (err) {
-    console.error("LOAD USERS ERROR:", err);
-
-    tableBody.innerHTML = `
-      <tr>
-        <td colspan="5">
-          ${escapeAdminHtml(err.code || "Error")}
-          —
-          ${escapeAdminHtml(
-            err.message || "Unable to load users."
-          )}
-        </td>
-      </tr>
-    `;
-  }
-}
-
-
-/* ---------------------------------------------------------
-   ACTIVITIES
---------------------------------------------------------- */
-
-async function loadAdminActivitiesTable() {
-  const tableBody = document.getElementById(
-    "admin-activities-table"
-  );
-
-  if (!tableBody) return;
-
-  tableBody.innerHTML = `
-    <tr>
-      <td colspan="5">Loading activities...</td>
-    </tr>
-  `;
-
-  try {
-    /*
-      Important:
-      We intentionally do NOT use:
-
-      .orderBy("date", "desc")
-
-      because Firestore excludes documents that do not
-      contain the ordered field.
-
-      We fetch all activities first and sort them locally.
-    */
-
-    const snapshot = await db
-      .collection(CESS_CONFIG.collections.ACTIVITIES)
-      .get();
-
-    console.log(
-      "CESS ACTIVITIES COUNT:",
-      snapshot.size
-    );
-
-    if (snapshot.empty) {
-      tableBody.innerHTML = `
-        <tr>
-          <td colspan="5">Activities not available yet.</td>
-        </tr>
-      `;
-      return;
-    }
-
-    const activities = [];
-
-    snapshot.forEach((doc) => {
-      activities.push({
-        id: doc.id,
-        ...doc.data()
-      });
-    });
-
-    // Newest first
-    activities.sort((a, b) => {
-      return (
-        getActivityDateValue(b.date) -
-        getActivityDateValue(a.date)
-      );
-    });
-
-    tableBody.innerHTML = "";
-
-    activities.forEach((activity) => {
-      const title =
-        typeof pickLang === "function"
-          ? (
-              pickLang(activity, "title") ||
-              activity.title ||
-              activity.title_en ||
-              activity.title_ar ||
-              "Untitled Activity"
-            )
-          : (
-              activity.title ||
-              activity.title_en ||
-              activity.title_ar ||
-              "Untitled Activity"
-            );
-
-      const date = formatActivityDate(activity.date);
-
-      const published =
-        activity.published === true;
-
-      const row = document.createElement("tr");
-
-      row.innerHTML = `
-        <td>
-          ${escapeAdminHtml(title)}
-        </td>
-
-        <td>
-          ${escapeAdminHtml(date)}
-        </td>
-
-        <td>
-          <span
-            class="status-badge ${
-              published ? "published" : "draft"
-            }"
-          >
-            ${published ? "Published" : "Draft"}
-          </span>
-        </td>
-
-        <td>
           <button
-            class="admin-action-btn activity-toggle-btn"
-            data-id="${escapeAdminHtml(activity.id)}"
-            data-published="${published}"
+            type="button"
+            id="close-activity-modal"
+            class="cess-modal-close"
           >
-            ${published ? "Unpublish" : "Publish"}
+            ×
           </button>
-        </td>
-
-        <td>
-          <button
-            class="admin-delete-btn activity-delete-btn"
-            data-id="${escapeAdminHtml(activity.id)}"
-          >
-            Delete
-          </button>
-        </td>
-      `;
-
-      tableBody.appendChild(row);
-    });
-
-    /* -----------------------------------------------
-       Publish / Unpublish
-    ------------------------------------------------ */
-
-    tableBody
-      .querySelectorAll(".activity-toggle-btn")
-      .forEach((button) => {
-        button.addEventListener("click", async () => {
-          const id = button.dataset.id;
-
-          const currentPublished =
-            button.dataset.published === "true";
-
-          if (
-            typeof toggleActivityPublished ===
-            "function"
-          ) {
-            await toggleActivityPublished(
-              id,
-              currentPublished
-            );
-          } else {
-            try {
-              await db
-                .collection(
-                  CESS_CONFIG.collections.ACTIVITIES
-                )
-                .doc(id)
-                .update({
-                  published: !currentPublished
-                });
-
-              await loadAdminActivitiesTable();
-
-            } catch (err) {
-              console.error(
-                "TOGGLE ACTIVITY ERROR:",
-                err
-              );
-
-              alert(
-                `${err.code || "Error"} — ${
-                  err.message ||
-                  "Unable to update activity."
-                }`
-              );
-            }
-          }
-        });
-      });
-
-    /* -----------------------------------------------
-       Delete
-    ------------------------------------------------ */
-
-    tableBody
-      .querySelectorAll(".activity-delete-btn")
-      .forEach((button) => {
-        button.addEventListener("click", async () => {
-          const id = button.dataset.id;
-
-          if (
-            typeof deleteActivity ===
-            "function"
-          ) {
-            await deleteActivity(id);
-          } else {
-            const confirmed = confirm(
-              "Are you sure you want to delete this activity?"
-            );
-
-            if (!confirmed) return;
-
-            try {
-              await db
-                .collection(
-                  CESS_CONFIG.collections.ACTIVITIES
-                )
-                .doc(id)
-                .delete();
-
-              await loadAdminActivitiesTable();
-
-            } catch (err) {
-              console.error(
-                "DELETE ACTIVITY ERROR:",
-                err
-              );
-
-              alert(
-                `${err.code || "Error"} — ${
-                  err.message ||
-                  "Unable to delete activity."
-                }`
-              );
-            }
-          }
-        });
-      });
-
-  } catch (err) {
-    console.error(
-      "LOAD ACTIVITIES ERROR:",
-      err
-    );
-
-    tableBody.innerHTML = `
-      <tr>
-        <td colspan="5">
-          ${escapeAdminHtml(
-            err.code || "Error"
-          )}
-          —
-          ${escapeAdminHtml(
-            err.message ||
-              "Unable to load activities."
-          )}
-        </td>
-      </tr>
-    `;
-  }
-}
-
-
-/* ---------------------------------------------------------
-   GENERIC ADMIN COLLECTION CARDS
---------------------------------------------------------- */
-
-async function loadAdminCollectionCards(
-  collectionName,
-  containerId
-) {
-  const container =
-    document.getElementById(containerId);
-
-  if (!container) return;
-
-  container.innerHTML = `
-    <p>Loading...</p>
-  `;
-
-  try {
-    const snapshot = await db
-      .collection(collectionName)
-      .get();
-
-    if (snapshot.empty) {
-      container.innerHTML = `
-        <p>No items available yet.</p>
-      `;
-      return;
-    }
-
-    container.innerHTML = "";
-
-    snapshot.forEach((doc) => {
-      const data = doc.data();
-
-      const title =
-        typeof pickLang === "function"
-          ? (
-              pickLang(data, "title") ||
-              data.title ||
-              "Untitled"
-            )
-          : (
-              data.title ||
-              "Untitled"
-            );
-
-      const description =
-        typeof pickLang === "function"
-          ? (
-              pickLang(data, "description") ||
-              data.description ||
-              ""
-            )
-          : (
-              data.description ||
-              ""
-            );
-
-      const published =
-        data.published === true;
-
-      const card =
-        document.createElement("div");
-
-      card.className =
-        "admin-collection-card";
-
-      card.innerHTML = `
-        <div class="admin-card-content">
-
-          <h3>
-            ${escapeAdminHtml(title)}
-          </h3>
-
-          ${
-            description
-              ? `
-                <p>
-                  ${escapeAdminHtml(
-                    description
-                  )}
-                </p>
-              `
-              : ""
-          }
-
-          <div class="admin-card-meta">
-            ${
-              published
-                ? "Published"
-                : "Draft"
-            }
-          </div>
 
         </div>
 
-        <button
-          class="admin-delete-btn"
-          data-collection="${escapeAdminHtml(
-            collectionName
-          )}"
-          data-id="${escapeAdminHtml(
-            doc.id
-          )}"
-        >
-          Delete
-        </button>
-      `;
 
-      container.appendChild(card);
-    });
+        <form id="cess-activity-form">
 
-    container
-      .querySelectorAll(".admin-delete-btn")
-      .forEach((button) => {
-        button.addEventListener(
-          "click",
-          async () => {
-            const collection =
-              button.dataset.collection;
+          <!-- Title -->
 
-            const id =
-              button.dataset.id;
+          <div class="cess-form-group">
 
-            const confirmed = confirm(
-              "Are you sure you want to delete this item?"
-            );
+            <label for="activity-title">
+              Activity Title
+            </label>
 
-            if (!confirmed) return;
+            <input
+              type="text"
+              id="activity-title"
+              name="title"
+              placeholder="Enter activity title"
+              required
+            >
 
-            try {
-              await db
-                .collection(collection)
-                .doc(id)
-                .delete();
+          </div>
 
-              await loadAdminCollectionCards(
-                collection,
-                containerId
-              );
 
-            } catch (err) {
-              console.error(
-                "DELETE ERROR:",
-                err
-              );
+          <!-- Description -->
 
-              alert(
-                `${err.code || "Error"} — ${
-                  err.message ||
-                  "Unable to delete item."
-                }`
-              );
-            }
-          }
-        );
-      });
+          <div class="cess-form-group">
 
-  } catch (err) {
-    console.error(
-      `LOAD ${collectionName} ERROR:`,
-      err
+            <label for="activity-description">
+              Description
+            </label>
+
+            <textarea
+              id="activity-description"
+              name="description"
+              rows="5"
+              placeholder="Enter activity description"
+              required
+            ></textarea>
+
+          </div>
+
+
+          <!-- Date -->
+
+          <div class="cess-form-group">
+
+            <label for="activity-date">
+              Activity Date
+            </label>
+
+            <input
+              type="date"
+              id="activity-date"
+              name="date"
+              required
+            >
+
+          </div>
+
+
+          <!-- Image URL -->
+
+          <div class="cess-form-group">
+
+            <label for="activity-image">
+              Image URL
+              <span>(Optional)</span>
+            </label>
+
+            <input
+              type="url"
+              id="activity-image"
+              name="image"
+              placeholder="https://..."
+            >
+
+          </div>
+
+
+          <!-- Published -->
+
+          <div class="cess-form-group cess-checkbox-group">
+
+            <label>
+
+              <input
+                type="checkbox"
+                id="activity-published"
+                checked
+              >
+
+              <span>
+                Publish this activity immediately
+              </span>
+
+            </label>
+
+          </div>
+
+
+          <!-- Error -->
+
+          <div
+            id="activity-form-error"
+            class="cess-form-error"
+          ></div>
+
+
+          <!-- Success -->
+
+          <div
+            id="activity-form-success"
+            class="cess-form-success"
+          ></div>
+
+
+          <!-- Buttons -->
+
+          <div class="cess-modal-actions">
+
+            <button
+              type="button"
+              id="cancel-activity-btn"
+              class="cess-cancel-btn"
+            >
+              Cancel
+            </button>
+
+            <button
+              type="submit"
+              id="save-activity-btn"
+              class="cess-save-btn"
+            >
+              Add Activity
+            </button>
+
+          </div>
+
+        </form>
+
+      </div>
+
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+
+  /* -------------------------------------------------------
+     Elements
+  ------------------------------------------------------- */
+
+  const overlay =
+    document.getElementById(
+      "cess-activity-overlay"
     );
 
-    container.innerHTML = `
-      <p>
-        ${escapeAdminHtml(
-          err.code || "Error"
-        )}
-        —
-        ${escapeAdminHtml(
-          err.message ||
-            "Unable to load data."
-        )}
-      </p>
-    `;
+  const form =
+    document.getElementById(
+      "cess-activity-form"
+    );
+
+  const closeButton =
+    document.getElementById(
+      "close-activity-modal"
+    );
+
+  const cancelButton =
+    document.getElementById(
+      "cancel-activity-btn"
+    );
+
+  const saveButton =
+    document.getElementById(
+      "save-activity-btn"
+    );
+
+  const errorElement =
+    document.getElementById(
+      "activity-form-error"
+    );
+
+  const successElement =
+    document.getElementById(
+      "activity-form-success"
+    );
+
+
+  /* -------------------------------------------------------
+     Close Modal
+  ------------------------------------------------------- */
+
+  function closeModal() {
+    modal.remove();
   }
-}
 
 
-/* ---------------------------------------------------------
-   SOCIAL LINKS
---------------------------------------------------------- */
+  closeButton.addEventListener(
+    "click",
+    closeModal
+  );
 
-async function loadSocialLinksForm() {
-  try {
-    const doc = await db
-      .collection(
-        CESS_CONFIG.collections.SETTINGS
-      )
-      .doc("socialLinks")
-      .get();
+  cancelButton.addEventListener(
+    "click",
+    closeModal
+  );
 
-    if (!doc.exists) {
-      return;
-    }
 
-    const data = doc.data();
+  overlay.addEventListener(
+    "click",
+    (event) => {
 
-    const fields = {
-      facebook: "social-facebook",
-      instagram: "social-instagram",
-      telegram: "social-telegram",
-      whatsapp: "social-whatsapp",
-      linkedin: "social-linkedin",
-      youtube: "social-youtube"
-    };
-
-    Object.keys(fields).forEach(
-      (key) => {
-        const input =
-          document.getElementById(
-            fields[key]
-          );
-
-        if (input) {
-          input.value =
-            data[key] || "";
-        }
+      if (
+        event.target === overlay
+      ) {
+        closeModal();
       }
-    );
 
-  } catch (err) {
-    console.error(
-      "LOAD SOCIAL LINKS ERROR:",
-      err
-    );
-  }
-}
+    }
+  );
 
 
-async function saveSocialLinks() {
-  const data = {
-    facebook:
-      document.getElementById(
-        "social-facebook"
-      )?.value.trim() || "",
+  /* -------------------------------------------------------
+     Submit Activity
+  ------------------------------------------------------- */
 
-    instagram:
-      document.getElementById(
-        "social-instagram"
-      )?.value.trim() || "",
+  form.addEventListener(
+    "submit",
+    async (event) => {
 
-    telegram:
-      document.getElementById(
-        "social-telegram"
-      )?.value.trim() || "",
+      event.preventDefault();
 
-    whatsapp:
-      document.getElementById(
-        "social-whatsapp"
-      )?.value.trim() || "",
 
-    linkedin:
-      document.getElementById(
-        "social-linkedin"
-      )?.value.trim() || "",
-
-    youtube:
-      document.getElementById(
-        "social-youtube"
-      )?.value.trim() || ""
-  };
-
-  try {
-    await db
-      .collection(
-        CESS_CONFIG.collections.SETTINGS
-      )
-      .doc("socialLinks")
-      .set(
-        data,
-        {
-          merge: true
-        }
+      errorElement.textContent = "";
+      errorElement.classList.remove(
+        "visible"
       );
 
-    const success =
-      document.getElementById(
-        "social-save-success"
+      successElement.textContent = "";
+      successElement.classList.remove(
+        "visible"
       );
 
-    if (success) {
-      success.classList.add("visible");
 
-      setTimeout(() => {
-        success.classList.remove(
+      /* -----------------------------------------------
+         Read Values
+      ------------------------------------------------ */
+
+      const title =
+        document
+          .getElementById(
+            "activity-title"
+          )
+          .value
+          .trim();
+
+
+      const description =
+        document
+          .getElementById(
+            "activity-description"
+          )
+          .value
+          .trim();
+
+
+      const date =
+        document
+          .getElementById(
+            "activity-date"
+          )
+          .value;
+
+
+      const image =
+        document
+          .getElementById(
+            "activity-image"
+          )
+          .value
+          .trim();
+
+
+      const published =
+        document
+          .getElementById(
+            "activity-published"
+          )
+          .checked;
+
+
+      /* -----------------------------------------------
+         Validation
+      ------------------------------------------------ */
+
+      if (!title) {
+
+        errorElement.textContent =
+          "Please enter the activity title.";
+
+        errorElement.classList.add(
           "visible"
         );
-      }, 2500);
-    }
 
-  } catch (err) {
-    console.error(
-      "SAVE SOCIAL LINKS ERROR:",
-      err
-    );
-
-    alert(
-      `${err.code || "Error"} — ${
-        err.message ||
-        "Unable to save social links."
-      }`
-    );
-  }
-}
-
-
-/* ---------------------------------------------------------
-   PUBLIC STATISTICS
---------------------------------------------------------- */
-
-async function loadStatsPreview() {
-  try {
-    const doc = await db
-      .collection(
-        CESS_CONFIG.collections.SETTINGS
-      )
-      .doc("publicStatistics")
-      .get();
-
-    if (!doc.exists) {
-      return;
-    }
-
-    const stats = doc.data();
-
-    Object.keys(stats).forEach(
-      (key) => {
-        const element =
-          document.getElementById(
-            `stat-${key}`
-          );
-
-        if (element) {
-          element.textContent =
-            stats[key];
-        }
+        return;
       }
-    );
-
-  } catch (err) {
-    console.error(
-      "LOAD STATS ERROR:",
-      err
-    );
-  }
-}
 
 
-async function refreshStatistics() {
-  try {
-    const activitiesSnapshot =
-      await db
-        .collection(
-          CESS_CONFIG.collections.ACTIVITIES
-        )
-        .get();
+      if (!description) {
 
-    const usersSnapshot =
-      await db
-        .collection(
-          CESS_CONFIG.collections.USERS
-        )
-        .get();
+        errorElement.textContent =
+          "Please enter the activity description.";
 
-    let publishedActivities = 0;
-    let members = 0;
-
-    activitiesSnapshot.forEach(
-      (doc) => {
-        const data = doc.data();
-
-        if (data.published === true) {
-          publishedActivities++;
-        }
-      }
-    );
-
-    usersSnapshot.forEach(
-      (doc) => {
-        const data = doc.data();
-
-        if (
-          data.role ===
-            CESS_CONFIG.roles.MEMBER ||
-          data.role ===
-            CESS_CONFIG.roles.LEADERSHIP
-        ) {
-          members++;
-        }
-      }
-    );
-
-    const statistics = {
-      activities: publishedActivities,
-      members: members
-    };
-
-    await db
-      .collection(
-        CESS_CONFIG.collections.SETTINGS
-      )
-      .doc("publicStatistics")
-      .set(
-        statistics,
-        {
-          merge: true
-        }
-      );
-
-    await loadStatsPreview();
-
-    const success =
-      document.getElementById(
-        "stats-save-success"
-      );
-
-    if (success) {
-      success.classList.add("visible");
-
-      setTimeout(() => {
-        success.classList.remove(
+        errorElement.classList.add(
           "visible"
         );
-      }, 2500);
-    }
 
-  } catch (err) {
-    console.error(
-      "REFRESH STATISTICS ERROR:",
-      err
-    );
-
-    alert(
-      `${err.code || "Error"} — ${
-        err.message ||
-        "Unable to refresh statistics."
-      }`
-    );
-  }
-}
+        return;
+      }
 
 
-/* ---------------------------------------------------------
-   DOM INITIALIZATION
---------------------------------------------------------- */
+      if (!date) {
 
-document.addEventListener(
-  "DOMContentLoaded",
-  () => {
+        errorElement.textContent =
+          "Please select the activity date.";
 
-    guardPage(
-      [CESS_CONFIG.roles.ADMIN],
-      async (profile) => {
+        errorElement.classList.add(
+          "visible"
+        );
+
+        return;
+      }
+
+
+      /* -----------------------------------------------
+         Check Authentication
+      ------------------------------------------------ */
+
+      const currentUser =
+        auth.currentUser;
+
+      if (!currentUser) {
+
+        errorElement.textContent =
+          "Your session has expired. Please log in again.";
+
+        errorElement.classList.add(
+          "visible"
+        );
+
+        return;
+      }
+
+
+      /* -----------------------------------------------
+         Save
+      ------------------------------------------------ */
+
+      try {
+
+        saveButton.disabled = true;
+
+        saveButton.textContent =
+          "Adding...";
+
+
+        /*
+         * Create activity document.
+         *
+         * Firestore automatically generates
+         * the document ID.
+         */
+
+        const activityData = {
+
+          title: title,
+
+          description: description,
+
+          date: date,
+
+          published: published,
+
+          createdAt:
+            firebase.firestore.FieldValue
+              .serverTimestamp(),
+
+          updatedAt:
+            firebase.firestore.FieldValue
+              .serverTimestamp(),
+
+          createdBy:
+            currentUser.uid
+
+        };
+
+
+        /*
+         * Image is optional.
+         * We only save it when the admin
+         * actually entered a URL.
+         */
+
+        if (image) {
+          activityData.image = image;
+        }
+
+
+        const docRef =
+          await db
+            .collection(
+              CESS_CONFIG.collections.ACTIVITIES
+            )
+            .add(activityData);
+
 
         console.log(
-          "CESS ADMIN AUTHORIZED:",
-          profile
+          "ACTIVITY CREATED:",
+          docRef.id
         );
 
-        // Users
-        await loadUsersTable();
 
-        // Activities
+        /* -------------------------------------------
+           Success
+        ------------------------------------------- */
+
+        successElement.textContent =
+          "Activity added successfully.";
+
+        successElement.classList.add(
+          "visible"
+        );
+
+
+        saveButton.textContent =
+          "Added";
+
+
+        /*
+         * Refresh Activities table
+         * immediately.
+         */
+
         await loadAdminActivitiesTable();
 
-        // Announcements
-        await loadAdminCollectionCards(
-          CESS_CONFIG.collections.ANNOUNCEMENTS,
-          "admin-announcements"
+
+        /*
+         * Close modal after short delay
+         */
+
+        setTimeout(() => {
+
+          closeModal();
+
+        }, 700);
+
+
+      } catch (err) {
+
+        console.error(
+          "ADD ACTIVITY ERROR:",
+          err
         );
 
-        // Resources
-        await loadAdminCollectionCards(
-          CESS_CONFIG.collections.RESOURCES,
-          "admin-resources"
+
+        errorElement.textContent =
+          `${err.code || "Error"} — ${
+            err.message ||
+            "Unable to add activity."
+          }`;
+
+        errorElement.classList.add(
+          "visible"
         );
 
-        // Public Archive
-        await loadAdminCollectionCards(
-          CESS_CONFIG.collections.PUBLIC_ARCHIVE,
-          "admin-archive"
-        );
 
-        // History
-        await loadAdminCollectionCards(
-          CESS_CONFIG.collections.HISTORY,
-          "admin-history"
-        );
+        saveButton.disabled = false;
 
-        // Social Links
-        await loadSocialLinksForm();
+        saveButton.textContent =
+          "Add Activity";
 
-        // Statistics
-        await loadStatsPreview();
       }
-    );
+
+    }
+  );
 
 
-    /* -----------------------------------------------------
-       Logout
-    ----------------------------------------------------- */
+  /* -------------------------------------------------------
+     Focus title
+  ------------------------------------------------------- */
 
-    const logoutButton =
+  setTimeout(() => {
+
+    const titleInput =
       document.getElementById(
-        "logout-btn"
+        "activity-title"
       );
 
-    if (logoutButton) {
-      logoutButton.addEventListener(
-        "click",
-        async () => {
-          try {
-            await logoutUser();
-          } catch (err) {
-            console.error(
-              "LOGOUT ERROR:",
-              err
-            );
-
-            alert(
-              err.message ||
-                "Unable to logout."
-            );
-          }
-        }
-      );
+    if (titleInput) {
+      titleInput.focus();
     }
 
+  }, 50);
 
-    /* -----------------------------------------------------
-       Social Links Save
-    ----------------------------------------------------- */
-
-    const socialForm =
-      document.getElementById(
-        "social-links-form"
-      );
-
-    if (socialForm) {
-      socialForm.addEventListener(
-        "submit",
-        async (e) => {
-          e.preventDefault();
-
-          await saveSocialLinks();
-        }
-      );
-    }
-
-
-    /* -----------------------------------------------------
-       Statistics Refresh
-    ----------------------------------------------------- */
-
-    const refreshStatsButton =
-      document.getElementById(
-        "refresh-stats-btn"
-      );
-
-    if (refreshStatsButton) {
-      refreshStatsButton.addEventListener(
-        "click",
-        async () => {
-
-          refreshStatsButton.disabled =
-            true;
-
-          const originalText =
-            refreshStatsButton.textContent;
-
-          refreshStatsButton.textContent =
-            "Refreshing...";
-
-          try {
-            await refreshStatistics();
-          } finally {
-            refreshStatsButton.disabled =
-              false;
-
-            refreshStatsButton.textContent =
-              originalText;
-          }
-        }
-      );
-    }
-
-
-    /* -----------------------------------------------------
-       New Activity
-    ----------------------------------------------------- */
-
-    const newActivityButton =
-      document.getElementById(
-        "new-activity-btn"
-      );
-
-    if (newActivityButton) {
-      newActivityButton.addEventListener(
-        "click",
-        () => {
-          alert(
-            "To add a new activity, create the activity document in Firestore under the activities collection."
-          );
-        }
-      );
-    }
-
-
-    /* -----------------------------------------------------
-       New Announcement
-    ----------------------------------------------------- */
-
-    const newAnnouncementButton =
-      document.getElementById(
-        "new-announcement-btn"
-      );
-
-    if (newAnnouncementButton) {
-      newAnnouncementButton.addEventListener(
-        "click",
-        () => {
-          alert(
-            "To add a new announcement, create the announcement document in Firestore under the announcements collection."
-          );
-        }
-      );
-    }
-
-
-    /* -----------------------------------------------------
-       New Resource
-    ----------------------------------------------------- */
-
-    const newResourceButton =
-      document.getElementById(
-        "new-resource-btn"
-      );
-
-    if (newResourceButton) {
-      newResourceButton.addEventListener(
-        "click",
-        () => {
-          alert(
-            "To add a new resource, create the resource document in Firestore under the resources collection."
-          );
-        }
-      );
-    }
-
-
-    /* -----------------------------------------------------
-       New Public Archive
-    ----------------------------------------------------- */
-
-    const newArchiveButton =
-      document.getElementById(
-        "new-archive-btn"
-      );
-
-    if (newArchiveButton) {
-      newArchiveButton.addEventListener(
-        "click",
-        () => {
-          alert(
-            "To add a public archive item, create the document in Firestore under the publicArchive collection."
-          );
-        }
-      );
-    }
-
-
-    /* -----------------------------------------------------
-       New History
-    ----------------------------------------------------- */
-
-    const newHistoryButton =
-      document.getElementById(
-        "new-history-btn"
-      );
-
-    if (newHistoryButton) {
-      newHistoryButton.addEventListener(
-        "click",
-        () => {
-          alert(
-            "To add a history item, create the document in Firestore under the history collection."
-          );
-        }
-      );
-    }
-
-  }
-);
+}
