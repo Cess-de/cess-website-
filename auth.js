@@ -1,140 +1,313 @@
 /* =========================================================
-   CESS — Centralized Authentication & Role Logic
-   =========================================================
-   Every dashboard page includes this file AFTER firebase-config.js.
-   All role checks live here so there is exactly one place to
-   audit for security-sensitive logic.
-
-   IMPORTANT: This file provides a better USER EXPERIENCE
-   (hiding pages a user shouldn't see, redirecting them).
-   It is NOT the real security boundary — Firestore Security
-   Rules are. A user can disable JavaScript or edit the DOM,
-   but they cannot bypass server-enforced Firestore rules.
+   CESS — AUTHENTICATION
    ========================================================= */
-
-/**
- * Fetches the current user's role document from Firestore.
- * Returns null if not logged in or the user doc doesn't exist yet.
- */
+console.log("CESS AUTH: auth.js loaded");
+/* =========================================================
+   GET CURRENT USER PROFILE
+   ========================================================= */
 async function getCurrentUserProfile() {
-  const user = auth.currentUser;
-  if (!user) return null;
-
-  try {
-    const doc = await db.collection(CESS_CONFIG.collections.USERS).doc(user.uid).get();
-    if (!doc.exists) return null;
-    return { uid: user.uid, ...doc.data() };
-  } catch (err) {
-    console.error("Error fetching user profile:", err);
+  console.log(
+    "CESS AUTH: getCurrentUserProfile()"
+  );
+  const user =
+    auth.currentUser;
+  if (!user) {
+    console.log(
+      "CESS AUTH: No Firebase user currently signed in"
+    );
     return null;
   }
-}
-
-/**
- * Guards a page: requires the user to be logged in AND to hold
- * one of the allowedRoles. Redirects safely otherwise.
- * Call this at the top of member.html / leadership.html / admin.html scripts.
- *
- * NOTE: This client-side guard is a convenience redirect only.
- * The real protection is that Firestore rules will reject any
- * read/write this page attempts if the role doesn't match —
- * so even if someone bypasses this redirect, they get no data.
- */
-function guardPage(allowedRoles, onAuthorized) {
-  auth.onAuthStateChanged(async (user) => {
-    if (!user) {
-      window.location.href = "login.html";
-      return;
+  console.log(
+    "CESS AUTH: Firebase UID:",
+    user.uid
+  );
+  try {
+    const doc =
+      await db
+        .collection(
+          CESS_CONFIG.collections.USERS
+        )
+        .doc(user.uid)
+        .get();
+    console.log(
+      "CESS AUTH: Firestore user document exists:",
+      doc.exists
+    );
+    if (!doc.exists) {
+      console.error(
+        "CESS AUTH ERROR: User authenticated but Firestore user document does not exist."
+      );
+      return null;
     }
-
-    const profile = await getCurrentUserProfile();
-
-    if (!profile || !allowedRoles.includes(profile.role)) {
-      // Not authorized for this page — send to their correct home
-      redirectToRoleHome(profile ? profile.role : null);
-      return;
-    }
-
-    onAuthorized(profile);
-  });
-}
-
-/**
- * Sends a logged-in user to the dashboard that matches their role.
- */
-function redirectToRoleHome(role) {
-  switch (role) {
-    case CESS_CONFIG.roles.ADMIN:
-      window.location.href = "admin.html";
-      break;
-    case CESS_CONFIG.roles.LEADERSHIP:
-      window.location.href = "leadership.html";
-      break;
-    case CESS_CONFIG.roles.MEMBER:
-      window.location.href = "member.html";
-      break;
-    default:
-      window.location.href = "index.html";
+    const data =
+      doc.data();
+    console.log(
+      "CESS AUTH: User profile:",
+      data
+    );
+    return {
+      uid: user.uid,
+      ...data
+    };
+  } catch (error) {
+    console.error(
+      "CESS AUTH ERROR: Failed to read user profile:",
+      error
+    );
+    throw error;
   }
 }
-
-/**
- * Registers a new user with role hard-set to "member".
- * Users can never choose their own role at signup.
- */
-async function registerUser({ fullName, email, password, batch }) {
-  const credential = await auth.createUserWithEmailAndPassword(email, password);
-  const uid = credential.user.uid;
-
-  await db.collection(CESS_CONFIG.collections.USERS).doc(uid).set({
-    name: fullName,
-    email: email,
-    batch: batch,
-    role: CESS_CONFIG.roles.MEMBER, // enforced default — never trust client input for this field
-    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-  });
-
-  return credential.user;
+/* =========================================================
+   REDIRECT BY ROLE
+   ========================================================= */
+function redirectToRoleHome(role) {
+  console.log(
+    "CESS AUTH: redirectToRoleHome() role =",
+    role
+  );
+  switch (role) {
+    case CESS_CONFIG.roles.ADMIN:
+      console.log(
+        "CESS AUTH: Redirecting to admin.html"
+      );
+      window.location.href =
+        "admin.html";
+      break;
+    case CESS_CONFIG.roles.LEADERSHIP:
+      console.log(
+        "CESS AUTH: Redirecting to leadership.html"
+      );
+      window.location.href =
+        "leadership.html";
+      break;
+    case CESS_CONFIG.roles.MEMBER:
+      console.log(
+        "CESS AUTH: Redirecting to member.html"
+      );
+      window.location.href =
+        "member.html";
+      break;
+    default:
+      console.error(
+        "CESS AUTH ERROR: Unknown role:",
+        role
+      );
+      window.location.href =
+        "index.html";
+  }
 }
-
-/**
- * Logs a user in, then redirects to their role's dashboard.
- */
-async function loginUser(email, password) {
-  await auth.signInWithEmailAndPassword(email, password);
-  const profile = await getCurrentUserProfile();
-  redirectToRoleHome(profile ? profile.role : null);
+/* =========================================================
+   LOGIN
+   ========================================================= */
+async function loginUser(
+  email,
+  password
+) {
+  console.log(
+    "===================================="
+  );
+  console.log(
+    "CESS AUTH: LOGIN START"
+  );
+  console.log(
+    "CESS AUTH: email =",
+    email
+  );
+  /* -------------------------------------------------------
+     Check Firebase
+     ------------------------------------------------------- */
+  if (
+    typeof firebase === "undefined"
+  ) {
+    throw new Error(
+      "Firebase SDK is not loaded."
+    );
+  }
+  if (
+    typeof auth === "undefined"
+  ) {
+    throw new Error(
+      "Firebase Auth is not initialized."
+    );
+  }
+  if (
+    typeof db === "undefined"
+  ) {
+    throw new Error(
+      "Firestore is not initialized."
+    );
+  }
+  /* -------------------------------------------------------
+     Firebase Authentication
+     ------------------------------------------------------- */
+  console.log(
+    "CESS AUTH: Calling signInWithEmailAndPassword..."
+  );
+  try {
+    const credential =
+      await auth
+        .signInWithEmailAndPassword(
+          email,
+          password
+        );
+    console.log(
+      "CESS AUTH: Firebase authentication SUCCESS"
+    );
+    console.log(
+      "CESS AUTH: UID =",
+      credential.user.uid
+    );
+    console.log(
+      "CESS AUTH: Email =",
+      credential.user.email
+    );
+    /* -----------------------------------------------------
+       Get Firestore profile
+       ----------------------------------------------------- */
+    console.log(
+      "CESS AUTH: Reading Firestore users document..."
+    );
+    const profile =
+      await getCurrentUserProfile();
+    if (!profile) {
+      console.error(
+        "CESS AUTH ERROR: Authentication succeeded but no profile was found."
+      );
+      throw new Error(
+        "Your Firebase account is valid, but your CESS user profile was not found in Firestore."
+      );
+    }
+    console.log(
+      "CESS AUTH: Profile loaded successfully"
+    );
+    console.log(
+      "CESS AUTH: ROLE =",
+      profile.role
+    );
+    /* -----------------------------------------------------
+       Check role
+       ----------------------------------------------------- */
+    if (!profile.role) {
+      throw new Error(
+        "Your account exists, but no role is assigned to your CESS profile."
+      );
+    }
+    /* -----------------------------------------------------
+       Redirect
+       ----------------------------------------------------- */
+    console.log(
+      "CESS AUTH: Redirecting..."
+    );
+    redirectToRoleHome(
+      profile.role
+    );
+  } catch (error) {
+    console.error(
+      "===================================="
+    );
+    console.error(
+      "CESS AUTH LOGIN ERROR"
+    );
+    console.error(
+      "CODE:",
+      error.code
+    );
+    console.error(
+      "MESSAGE:",
+      error.message
+    );
+    console.error(
+      "FULL ERROR:",
+      error
+    );
+    console.error(
+      "===================================="
+    );
+    throw error;
+  }
 }
-
-/**
- * Signs the current user out and returns to the public homepage.
- */
+/* =========================================================
+   LOGOUT
+   ========================================================= */
 async function logoutUser() {
+  console.log(
+    "CESS AUTH: Logging out..."
+  );
   await auth.signOut();
-  window.location.href = "index.html";
+  window.location.href =
+    "index.html";
 }
-
-/**
- * Sends a password reset email.
- */
-async function sendPasswordReset(email) {
-  await auth.sendPasswordResetEmail(email);
+/* =========================================================
+   PASSWORD RESET
+   ========================================================= */
+async function sendPasswordReset(
+  email
+) {
+  console.log(
+    "CESS AUTH: Sending password reset..."
+  );
+  return await auth
+    .sendPasswordResetEmail(
+      email
+    );
 }
-
-/**
- * Friendly, non-technical error messages for common auth failures.
- * Keeps user-facing errors simple and professional per spec.
- */
-function friendlyAuthError(error) {
-  const map = {
-    "auth/email-already-in-use": "This email is already registered. Try logging in instead.",
-    "auth/invalid-email": "Please enter a valid email address.",
-    "auth/weak-password": "Password should be at least 6 characters.",
-    "auth/user-not-found": "No account found with this email.",
-    "auth/wrong-password": "Incorrect password. Please try again.",
-     "auth/invalid-credential": "Incorrect email or password. Please try again.",
-    "auth/too-many-requests": "Too many attempts. Please wait a moment and try again.",
-    "auth/network-request-failed": "Network error. Please check your connection."
-  };
-  return map[error.code] || "Something went wrong. Please try again.";
+/* =========================================================
+   GUARD PAGE
+   ========================================================= */
+function guardPage(
+  allowedRoles,
+  onAuthorized
+) {
+  console.log(
+    "CESS AUTH: guardPage()"
+  );
+  auth.onAuthStateChanged(
+    async function(user) {
+      console.log(
+        "CESS AUTH: Auth state changed:",
+        user
+      );
+      if (!user) {
+        console.log(
+          "CESS AUTH: User not signed in"
+        );
+        window.location.href =
+          "login.html";
+        return;
+      }
+      try {
+        const profile =
+          await getCurrentUserProfile();
+        if (
+          !profile ||
+          !allowedRoles.includes(
+            profile.role
+          )
+        ) {
+          console.error(
+            "CESS AUTH: Unauthorized role:",
+            profile
+              ? profile.role
+              : null
+          );
+          redirectToRoleHome(
+            profile
+              ? profile.role
+              : null
+          );
+          return;
+        }
+        onAuthorized(
+          profile
+        );
+      } catch (error) {
+        console.error(
+          "CESS AUTH: guardPage error:",
+          error
+        );
+        window.location.href =
+          "login.html";
+      }
+    }
+  );
 }
