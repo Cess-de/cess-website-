@@ -1,168 +1,512 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr">
+
 <head>
+
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>CESS — Login</title>
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0">
 
-<link rel="stylesheet" href="style.css">
-<link rel="stylesheet" href="responsive.css">
+<title>Login — CESS</title>
+
+<link
+  rel="stylesheet"
+  href="style.css">
+
+<link
+  rel="stylesheet"
+  href="responsive.css">
+
 </head>
+
 
 <body>
 
-<div class="form-card">
 
-    <h1>CESS Login</h1>
+<header class="site-header">
+
+  <div class="nav-wrapper">
+
+    <a
+      href="index.html"
+      class="logo-link">
+
+      <img
+        src="cess-logo.png"
+        alt="CESS logo"
+        onerror="this.style.display='none'">
+
+      <span class="logo-text-mark">
+
+        <span class="primary">
+          CESS
+        </span>
+
+        <span
+          class="secondary"
+          data-en="Civil Engineering Student Society"
+          data-ar="جمعية طلاب الهندسة المدنية">
+
+          Civil Engineering Student Society
+
+        </span>
+
+      </span>
+
+    </a>
+
+
+    <button
+      class="hamburger"
+      id="hamburger"
+      aria-label="Toggle navigation">
+
+      <span></span>
+      <span></span>
+      <span></span>
+
+    </button>
+
+
+    <nav
+      class="nav-menu"
+      id="nav-menu">
+
+      <a
+        href="index.html"
+        data-en="Home"
+        data-ar="الرئيسية">
+
+        Home
+
+      </a>
+
+      <a
+        href="about.html"
+        data-en="About"
+        data-ar="عن الجمعية">
+
+        About
+
+      </a>
+
+      <a
+        href="activities.html"
+        data-en="Activities"
+        data-ar="الأنشطة">
+
+        Activities
+
+      </a>
+
+      <a
+        href="contact.html"
+        data-en="Contact"
+        data-ar="تواصل معنا">
+
+        Contact
+
+      </a>
+
+
+      <div class="nav-actions">
+
+        <button
+          id="lang-toggle"
+          aria-label="Switch language">
+
+          <span id="lang-toggle-label">
+            AR
+          </span>
+
+        </button>
+
+      </div>
+
+    </nav>
+
+  </div>
+
+</header>
+
+
+
+<main>
+
+  <div class="form-card">
+
+    <h1
+      class="text-center"
+      data-en="Login"
+      data-ar="تسجيل الدخول">
+
+      Login
+
+    </h1>
+
 
     <form id="login-form">
 
-        <div class="form-group">
-            <label>Email</label>
+      <div class="form-group">
 
-            <input
-                type="email"
-                id="email"
-                required
-                autocomplete="email">
-        </div>
+        <label
+          for="email"
+          data-en="Email"
+          data-ar="البريد الإلكتروني">
 
-        <div class="form-group">
-            <label>Password</label>
+          Email
 
-            <input
-                type="password"
-                id="password"
-                required
-                autocomplete="current-password">
-        </div>
+        </label>
 
-        <button
-            type="submit"
-            id="login-button"
-            class="btn btn-primary"
-            style="width:100%;">
-            Login
-        </button>
+
+        <input
+          type="email"
+          id="email"
+          required
+          autocomplete="email">
+
+      </div>
+
+
+
+      <div class="form-group">
+
+        <label
+          for="password"
+          data-en="Password"
+          data-ar="كلمة المرور">
+
+          Password
+
+        </label>
+
+
+        <input
+          type="password"
+          id="password"
+          required
+          autocomplete="current-password">
+
+      </div>
+
+
+
+      <p
+        class="form-error"
+        id="login-error">
+      </p>
+
+
+      <button
+        type="submit"
+        id="login-submit-btn"
+        class="btn btn-primary"
+        style="width:100%;">
+
+        <span
+          data-en="Login"
+          data-ar="تسجيل الدخول">
+
+          Login
+
+        </span>
+
+      </button>
 
     </form>
 
-    <div
-        id="status"
-        style="
-            margin-top:20px;
-            padding:12px;
-            display:none;
-            border-radius:8px;
-            background:#f3f3f3;
-        ">
-    </div>
-
-</div>
 
 
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <p class="form-footer-link">
 
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+      <a
+        href="#"
+        id="forgot-password-link"
+        data-en="Forgot password?"
+        data-ar="نسيت كلمة المرور؟">
+
+        Forgot password?
+
+      </a>
+
+    </p>
+
+
+
+    <p class="form-footer-link">
+
+      <span
+        data-en="Don't have an account?"
+        data-ar="ليس لديك حساب؟">
+
+        Don't have an account?
+
+      </span>
+
+
+      <a
+        href="register.html"
+        data-en="Create one"
+        data-ar="أنشئ حسابًا">
+
+        Create one
+
+      </a>
+
+    </p>
+
+  </div>
+
+</main>
+
+
+
+<!-- ========================================================
+     FIREBASE
+     ======================================================== -->
+
+<script
+  src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js">
+</script>
+
+<script
+  src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js">
+</script>
+
+<script
+  src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js">
+</script>
+
+
+<!-- ========================================================
+     CESS FIREBASE CONFIG
+     ======================================================== -->
 
 <script src="firebase-config.js"></script>
 
 
+<!-- ========================================================
+     CESS AUTH SYSTEM
+     ======================================================== -->
+
+<script src="auth.js"></script>
+
+
+<!-- ========================================================
+     MAIN APP
+     ======================================================== -->
+
+<script src="app.js"></script>
+
+
+
 <script>
 
-const form = document.getElementById("login-form");
-const button = document.getElementById("login-button");
-const status = document.getElementById("status");
+document.addEventListener(
+  "DOMContentLoaded",
+  function () {
+
+    const form =
+      document.getElementById("login-form");
+
+    const errorEl =
+      document.getElementById("login-error");
+
+    const button =
+      document.getElementById("login-submit-btn");
+
+    const forgotLink =
+      document.getElementById(
+        "forgot-password-link"
+      );
 
 
-function showStatus(message) {
+    /* ======================================================
+       LOGIN
+       ====================================================== */
 
-    status.style.display = "block";
-    status.textContent = message;
+    form.addEventListener(
+      "submit",
+      async function (event) {
 
-}
+        event.preventDefault();
 
+        errorEl.textContent = "";
+        errorEl.classList.remove("visible");
 
-form.addEventListener("submit", async function(e) {
-
-    e.preventDefault();
-
-    const email =
-        document.getElementById("email").value.trim();
-
-    const password =
-        document.getElementById("password").value;
+        errorEl.style.color = "";
 
 
-    button.disabled = true;
+        const email =
+          document
+            .getElementById("email")
+            .value
+            .trim();
 
-    button.textContent = "Signing in...";
 
-    showStatus("Signing in...");
+        const password =
+          document
+            .getElementById("password")
+            .value;
 
 
-    try {
+        button.disabled = true;
 
-        const result =
-            await auth.signInWithEmailAndPassword(
-                email,
-                password
+
+        const originalText =
+          button.querySelector("span");
+
+
+        if (originalText) {
+
+          originalText.textContent =
+            "Signing in...";
+
+        } else {
+
+          button.textContent =
+            "Signing in...";
+
+        }
+
+
+        try {
+
+          await CESS_AUTH.loginUser(
+            email,
+            password
+          );
+
+        } catch (error) {
+
+          console.error(
+            "CESS LOGIN ERROR:",
+            error
+          );
+
+
+          errorEl.textContent =
+            CESS_AUTH.friendlyAuthError(
+              error
             );
 
 
-        console.log(
-            "Firebase login successful:",
-            result.user.uid
-        );
+          errorEl.classList.add(
+            "visible"
+          );
 
 
-        showStatus(
-            "LOGIN SUCCESS — preparing redirect..."
-        );
+          button.disabled = false;
 
 
-        /*
-         * IMPORTANT:
-         * We are deliberately NOT reading Firestore
-         * and NOT using auth.js here.
-         *
-         * This test only checks whether the browser
-         * can move from login.html to admin.html.
-         */
+          if (originalText) {
+
+            originalText.textContent =
+              "Login";
+
+          } else {
+
+            button.textContent =
+              "Login";
+
+          }
+
+        }
+
+      }
+    );
 
 
-        setTimeout(function() {
+    /* ======================================================
+       FORGOT PASSWORD
+       ====================================================== */
 
-            console.log(
-                "REDIRECT TEST → admin.html"
+    forgotLink.addEventListener(
+      "click",
+      async function (event) {
+
+        event.preventDefault();
+
+        errorEl.textContent = "";
+        errorEl.classList.remove("visible");
+
+        errorEl.style.color = "";
+
+
+        const email =
+          document
+            .getElementById("email")
+            .value
+            .trim();
+
+
+        if (!email) {
+
+          errorEl.textContent =
+            "Please enter your email address first.";
+
+          errorEl.classList.add(
+            "visible"
+          );
+
+          return;
+        }
+
+
+        try {
+
+          await CESS_AUTH.sendPasswordReset(
+            email
+          );
+
+
+          errorEl.style.color =
+            "var(--color-success)";
+
+
+          errorEl.textContent =
+            "Password reset email sent successfully.";
+
+
+          errorEl.classList.add(
+            "visible"
+          );
+
+
+        } catch (error) {
+
+          console.error(
+            "CESS PASSWORD RESET ERROR:",
+            error
+          );
+
+
+          errorEl.style.color =
+            "var(--color-danger)";
+
+
+          errorEl.textContent =
+            CESS_AUTH.friendlyAuthError(
+              error
             );
 
-            window.location.href =
-                "./admin.html";
 
-        }, 1000);
+          errorEl.classList.add(
+            "visible"
+          );
 
+        }
 
-    } catch (error) {
+      }
+    );
 
-        console.error(error);
-
-        showStatus(
-            error.code +
-            " — " +
-            error.message
-        );
-
-        button.disabled = false;
-
-        button.textContent = "Login";
-
-    }
-
-});
+  }
+);
 
 </script>
+
 
 </body>
 </html>
