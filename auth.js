@@ -1,456 +1,821 @@
-(function () {
-  "use strict";
+// ============================================================
+// CESS — Authentication System
+// Civil Engineering Student Society
+// ============================================================
 
-  /* =========================================================
-     CESS — AUTHENTICATION SYSTEM
-     ========================================================= */
+import { auth, db } from "./firebase-config.js";
+import {
+  getCurrentSession
+} from "./session.js";
 
-  function getUserProfile(uid) {
-    return db
-      .collection(CESS_CONFIG.collections.USERS)
-      .doc(uid)
-      .get();
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  updateProfile,
+  deleteUser
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+
+import {
+  doc,
+  setDoc,
+  getDoc,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+
+// ============================================================
+// Configuration
+// ============================================================
+
+const LOGIN_PAGE = "login.html";
+const MEMBER_PAGE = "member-dashboard.html";
+const LEADERSHIP_PAGE = "leadership-dashboard.html";
+
+
+// ============================================================
+// DOM Helpers
+// ============================================================
+
+function getElement(id) {
+  return document.getElementById(id);
+}
+
+
+function showError(message) {
+
+  const errorBox = getElement("authError");
+
+  if (!errorBox) {
+    console.error("[CESS Auth]", message);
+    return;
   }
 
-  async function getCurrentUserProfile() {
-    const user = auth.currentUser;
+  errorBox.textContent = message;
+  errorBox.style.display = "block";
 
-    if (!user) {
-      return null;
-    }
+  const successBox = getElement("authSuccess");
 
-    const doc = await getUserProfile(user.uid);
+  if (successBox) {
+    successBox.style.display = "none";
+  }
+}
 
-    if (!doc.exists) {
-      return null;
-    }
 
-    return {
-      uid: user.uid,
-      ...doc.data()
-    };
+function showSuccess(message) {
+
+  const successBox = getElement("authSuccess");
+
+  if (!successBox) {
+    console.log("[CESS Auth]", message);
+    return;
   }
 
+  successBox.textContent = message;
+  successBox.style.display = "block";
 
-  /* =========================================================
-     ROLE REDIRECTION
-     ========================================================= */
+  const errorBox = getElement("authError");
 
-  function redirectToRoleHome(role) {
+  if (errorBox) {
+    errorBox.style.display = "none";
+  }
+}
 
-    if (role === CESS_CONFIG.roles.ADMIN) {
-      window.location.replace("admin.html");
-      return;
-    }
 
-    if (role === CESS_CONFIG.roles.LEADERSHIP) {
-      window.location.replace("leadership.html");
-      return;
-    }
+function clearMessages() {
 
-    if (role === CESS_CONFIG.roles.MEMBER) {
-      window.location.replace("member.html");
-      return;
-    }
+  const errorBox = getElement("authError");
 
-    window.location.replace("index.html");
+  if (errorBox) {
+    errorBox.textContent = "";
+    errorBox.style.display = "none";
   }
 
+  const successBox = getElement("authSuccess");
 
-  /* =========================================================
-     LOGIN
-     ========================================================= */
+  if (successBox) {
+    successBox.textContent = "";
+    successBox.style.display = "none";
+  }
+}
 
-  async function loginUser(email, password) {
 
-    email = String(email || "").trim();
+function setButtonLoading(button, loading, loadingText) {
 
-    if (!email) {
-      throw new Error("Please enter your email address.");
-    }
-
-    if (!password) {
-      throw new Error("Please enter your password.");
-    }
-
-    console.log("CESS AUTH: Signing in...");
-
-    const credential =
-      await auth.signInWithEmailAndPassword(
-        email,
-        password
-      );
-
-    const user = credential.user;
-
-    console.log(
-      "CESS AUTH: Firebase login successful:",
-      user.uid
-    );
-
-    const doc = await getUserProfile(user.uid);
-
-    if (!doc.exists) {
-
-      /*
-       * Firebase account exists,
-       * but there is no CESS profile.
-       */
-
-      await auth.signOut();
-
-      throw new Error(
-        "Your account exists, but your CESS profile was not found."
-      );
-    }
-
-    const profile = {
-      uid: user.uid,
-      ...doc.data()
-    };
-
-    if (!profile.role) {
-
-      await auth.signOut();
-
-      throw new Error(
-        "Your CESS account does not have a role assigned."
-      );
-    }
-
-    console.log(
-      "CESS AUTH: Role:",
-      profile.role
-    );
-
-    redirectToRoleHome(profile.role);
-
-    return profile;
+  if (!button) {
+    return;
   }
 
+  if (loading) {
 
-  /* =========================================================
-     REGISTER
-     ========================================================= */
+    button.dataset.originalText =
+      button.textContent;
 
-  async function registerUser({
-    fullName,
-    email,
-    password,
-    batch
-  }) {
+    button.disabled = true;
 
-    fullName = String(fullName || "").trim();
-    email = String(email || "").trim();
-    batch = String(batch || "").trim();
+    button.textContent =
+      loadingText || "جاري التنفيذ...";
 
-    if (!fullName) {
-      throw new Error("Please enter your full name.");
-    }
+  } else {
 
-    if (!email) {
-      throw new Error("Please enter your email address.");
-    }
+    button.disabled = false;
 
-    if (!password) {
-      throw new Error("Please enter a password.");
-    }
+    button.textContent =
+      button.dataset.originalText ||
+      button.textContent;
+  }
+}
 
-    if (password.length < 6) {
-      throw new Error(
-        "Password must contain at least 6 characters."
-      );
-    }
 
-    console.log("CESS AUTH: Creating account...");
+// ============================================================
+// Firebase Error Translation
+// ============================================================
 
-    const credential =
-      await auth.createUserWithEmailAndPassword(
-        email,
-        password
-      );
+function translateFirebaseError(error) {
 
-    const user = credential.user;
+  console.error("[CESS Auth Error]", error);
 
-    console.log(
-      "CESS AUTH: Firebase account created:",
-      user.uid
-    );
+  const code = error?.code || "";
 
-    try {
+  switch (code) {
 
-      await db
-        .collection(CESS_CONFIG.collections.USERS)
-        .doc(user.uid)
-        .set({
+    case "auth/email-already-in-use":
+      return "هذا البريد الإلكتروني مسجل بالفعل. جرّب تسجيل الدخول بدلًا من إنشاء حساب جديد.";
 
-          name: fullName,
+    case "auth/invalid-email":
+      return "البريد الإلكتروني غير صحيح.";
 
-          email: user.email,
+    case "auth/weak-password":
+      return "كلمة المرور ضعيفة. استخدم كلمة مرور أقوى.";
 
-          batch: batch,
+    case "auth/password-does-not-meet-requirements":
+      return "كلمة المرور لا تستوفي متطلبات الأمان المطلوبة.";
 
-          role: CESS_CONFIG.roles.MEMBER,
+    case "auth/user-not-found":
+      return "لا يوجد حساب بهذا البريد الإلكتروني.";
 
-          createdAt:
-            firebase.firestore.FieldValue
-              .serverTimestamp()
+    case "auth/wrong-password":
+    case "auth/invalid-credential":
+      return "البريد الإلكتروني أو كلمة المرور غير صحيحة.";
 
-        });
+    case "auth/user-disabled":
+      return "هذا الحساب تم تعطيله. تواصل مع إدارة CESS.";
 
-    } catch (firestoreError) {
+    case "auth/too-many-requests":
+      return "تمت محاولات كثيرة. انتظر قليلًا ثم حاول مرة أخرى.";
 
-      /*
-       * If the Firebase account was created but
-       * the CESS profile failed, remove the Auth account
-       * so registration does not leave a broken account.
-       */
+    case "auth/network-request-failed":
+      return "تعذر الاتصال بخدمة Firebase. تأكد من الإنترنت وحاول مرة أخرى.";
 
-      console.error(
-        "CESS AUTH: Failed to create profile:",
-        firestoreError
-      );
+    case "auth/operation-not-allowed":
+      return "تسجيل الدخول بالبريد الإلكتروني غير مفعّل في Firebase.";
 
-      try {
-        await user.delete();
-      } catch (deleteError) {
-        console.error(
-          "CESS AUTH: Failed to rollback account:",
-          deleteError
-        );
-      }
+    case "permission-denied":
+      return "تم رفض الوصول إلى قاعدة البيانات. تحقق من Firestore Rules.";
 
-      throw firestoreError;
-    }
+    case "failed-precondition":
+      return "قاعدة البيانات غير جاهزة بالشكل المطلوب.";
 
-    console.log(
-      "CESS AUTH: CESS profile created."
-    );
+    case "unavailable":
+      return "خدمة قاعدة البيانات غير متاحة حاليًا. حاول مرة أخرى.";
 
-    /*
-     * New registrations are members by default.
-     */
+    default:
+      return error?.message ||
+        "حدث خطأ غير متوقع. حاول مرة أخرى.";
+  }
+}
 
-    redirectToRoleHome(
-      CESS_CONFIG.roles.MEMBER
-    );
 
-    return {
-      uid: user.uid,
-      name: fullName,
-      email: user.email,
-      batch: batch,
-      role: CESS_CONFIG.roles.MEMBER
-    };
+// ============================================================
+// Validate Signup Form
+// ============================================================
+
+function validateSignup(name, email, cohort, password) {
+
+  if (!name.trim()) {
+    return "اكتب الاسم الكامل.";
   }
 
-
-  /* =========================================================
-     LOGOUT
-     ========================================================= */
-
-  async function logoutUser() {
-
-    console.log("CESS AUTH: Signing out...");
-
-    await auth.signOut();
-
-    window.location.replace("index.html");
+  if (!email.trim()) {
+    return "اكتب البريد الإلكتروني.";
   }
 
-
-  /* =========================================================
-     PASSWORD RESET
-     ========================================================= */
-
-  async function sendPasswordReset(email) {
-
-    email = String(email || "").trim();
-
-    if (!email) {
-      throw new Error(
-        "Please enter your email address first."
-      );
-    }
-
-    await auth.sendPasswordResetEmail(email);
-
-    return true;
+  if (!cohort.trim()) {
+    return "اكتب الدفعة أو الفوج.";
   }
 
-
-  /* =========================================================
-     PAGE GUARD
-     ========================================================= */
-
-  function guardPage(allowedRoles, onAuthorized) {
-
-    let handled = false;
-
-    auth.onAuthStateChanged(async function (user) {
-
-      if (handled) {
-        return;
-      }
-
-      if (!user) {
-
-        window.location.replace("login.html");
-
-        return;
-      }
-
-      try {
-
-        const profile =
-          await getCurrentUserProfile();
-
-        if (!profile) {
-
-          await auth.signOut();
-
-          window.location.replace("login.html");
-
-          return;
-        }
-
-        if (
-          !Array.isArray(allowedRoles) ||
-          !allowedRoles.includes(profile.role)
-        ) {
-
-          redirectToRoleHome(profile.role);
-
-          return;
-        }
-
-        handled = true;
-
-        if (typeof onAuthorized === "function") {
-          onAuthorized(profile);
-        }
-
-      } catch (error) {
-
-        console.error(
-          "CESS AUTH: Guard error:",
-          error
-        );
-
-        await auth.signOut();
-
-        window.location.replace("login.html");
-      }
-
-    });
+  if (!password) {
+    return "اكتب كلمة المرور.";
   }
 
-
-  /* =========================================================
-     FRIENDLY AUTH ERRORS
-     ========================================================= */
-
-  function friendlyAuthError(error) {
-
-    if (!error) {
-      return "Something went wrong. Please try again.";
-    }
-
-    const code = error.code || "";
-
-    const messages = {
-
-      "auth/email-already-in-use":
-        "This email is already registered. Please log in instead.",
-
-      "auth/invalid-email":
-        "Please enter a valid email address.",
-
-      "auth/weak-password":
-        "Password must contain at least 6 characters.",
-
-      "auth/user-not-found":
-        "No account was found with this email.",
-
-      "auth/wrong-password":
-        "Incorrect password. Please try again.",
-
-      "auth/invalid-credential":
-        "Incorrect email or password.",
-
-      "auth/user-disabled":
-        "This account has been disabled.",
-
-      "auth/too-many-requests":
-        "Too many attempts. Please wait and try again.",
-
-      "auth/network-request-failed":
-        "Network error. Please check your internet connection.",
-
-      "auth/operation-not-allowed":
-        "Email/password authentication is not enabled.",
-
-      "auth/missing-password":
-        "Please enter your password.",
-
-      "auth/invalid-password":
-        "The password is incorrect.",
-
-      "auth/requires-recent-login":
-        "Please log in again and retry this action."
-    };
-
-    return (
-      messages[code] ||
-      error.message ||
-      "Something went wrong. Please try again."
-    );
+  if (password.length < 6) {
+    return "كلمة المرور يجب أن تكون 6 أحرف على الأقل.";
   }
 
+  return null;
+}
 
-  /* =========================================================
-     PUBLIC API
-     ========================================================= */
 
-  window.CESS_AUTH = {
-    getCurrentUserProfile,
-    loginUser,
-    registerUser,
-    logoutUser,
-    sendPasswordReset,
-    guardPage,
-    friendlyAuthError,
-    redirectToRoleHome
+// ============================================================
+// Validate Login Form
+// ============================================================
+
+function validateLogin(email, password) {
+
+  if (!email.trim()) {
+    return "اكتب البريد الإلكتروني.";
+  }
+
+  if (!password) {
+    return "اكتب كلمة المرور.";
+  }
+
+  return null;
+}
+
+
+// ============================================================
+// Create Firestore User Profile
+// ============================================================
+
+async function createUserProfile(firebaseUser, data) {
+
+  const userRef = doc(
+    db,
+    "users",
+    firebaseUser.uid
+  );
+
+
+  const profile = {
+
+    uid: firebaseUser.uid,
+
+    name: data.name,
+
+    email: firebaseUser.email,
+
+    cohort: data.cohort,
+
+    department: "Civil Engineering",
+
+    role: "member",
+
+    status: "active",
+
+    joinedAt: serverTimestamp(),
+
+    updatedAt: serverTimestamp()
   };
 
 
-  /*
-   * Backward compatibility.
-   * Existing CESS pages can continue calling these names.
-   */
+  await setDoc(
+    userRef,
+    profile
+  );
 
-  window.getCurrentUserProfile =
-    getCurrentUserProfile;
 
-  window.loginUser =
-    loginUser;
+  // ----------------------------------------------------------
+  // Verify that the profile really exists
+  // ----------------------------------------------------------
 
-  window.registerUser =
-    registerUser;
+  const verification =
+    await getDoc(userRef);
 
-  window.logoutUser =
-    logoutUser;
 
-  window.sendPasswordReset =
-    sendPasswordReset;
+  if (!verification.exists()) {
 
-  window.guardPage =
-    guardPage;
+    throw new Error(
+      "تم إنشاء حساب Firebase لكن لم يتم إنشاء ملف العضو في Firestore."
+    );
+  }
 
-  window.friendlyAuthError =
-    friendlyAuthError;
 
-  window.redirectToRoleHome =
-    redirectToRoleHome;
+  return verification.data();
+}
 
-})();
+
+// ============================================================
+// SIGN UP
+// ============================================================
+
+export async function signup() {
+
+  clearMessages();
+
+
+  const name =
+    getElement("signupName")?.value.trim() || "";
+
+  const email =
+    getElement("signupEmail")?.value.trim() || "";
+
+  const cohort =
+    getElement("signupCohort")?.value.trim() || "";
+
+  const password =
+    getElement("signupPassword")?.value || "";
+
+  const submitButton =
+    getElement("signupSubmit");
+
+
+  // ----------------------------------------------------------
+  // Validate
+  // ----------------------------------------------------------
+
+  const validationError =
+    validateSignup(
+      name,
+      email,
+      cohort,
+      password
+    );
+
+
+  if (validationError) {
+
+    showError(validationError);
+
+    return;
+  }
+
+
+  setButtonLoading(
+    submitButton,
+    true,
+    "جاري إنشاء الحساب..."
+  );
+
+
+  let firebaseUser = null;
+
+
+  try {
+
+    // --------------------------------------------------------
+    // 1. Create Firebase Authentication Account
+    // --------------------------------------------------------
+
+    const credential =
+      await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+
+
+    firebaseUser =
+      credential.user;
+
+
+    // --------------------------------------------------------
+    // 2. Add Display Name
+    // --------------------------------------------------------
+
+    await updateProfile(
+      firebaseUser,
+      {
+        displayName: name
+      }
+    );
+
+
+    // --------------------------------------------------------
+    // 3. Create Firestore Profile
+    // --------------------------------------------------------
+
+    await createUserProfile(
+      firebaseUser,
+      {
+        name,
+        email,
+        cohort
+      }
+    );
+
+
+    // --------------------------------------------------------
+    // 4. Force-refresh session information
+    // --------------------------------------------------------
+
+    await new Promise(
+      (resolve) => setTimeout(resolve, 300)
+    );
+
+
+    // --------------------------------------------------------
+    // 5. Success
+    // --------------------------------------------------------
+
+    showSuccess(
+      "تم إنشاء حسابك بنجاح. سيتم تحويلك إلى لوحة العضو..."
+    );
+
+
+    // --------------------------------------------------------
+    // 6. Redirect
+    // --------------------------------------------------------
+
+    setTimeout(() => {
+
+      window.location.replace(
+        MEMBER_PAGE
+      );
+
+    }, 800);
+
+
+  } catch (error) {
+
+    // --------------------------------------------------------
+    // IMPORTANT:
+    // If Auth account was created but Firestore failed,
+    // remove the newly-created Auth account.
+    // This prevents orphan accounts.
+    // --------------------------------------------------------
+
+    if (firebaseUser) {
+
+      try {
+
+        await deleteUser(firebaseUser);
+
+        console.warn(
+          "[CESS Auth] Rolled back newly-created Auth user."
+        );
+
+      } catch (rollbackError) {
+
+        console.error(
+          "[CESS Auth] Rollback failed:",
+          rollbackError
+        );
+      }
+    }
+
+
+    try {
+
+      await signOut(auth);
+
+    } catch (signOutError) {
+
+      console.error(
+        "[CESS Auth] Cleanup signOut failed:",
+        signOutError
+      );
+    }
+
+
+    showError(
+      translateFirebaseError(error)
+    );
+
+
+  } finally {
+
+    setButtonLoading(
+      submitButton,
+      false
+    );
+  }
+}
+
+
+// ============================================================
+// LOGIN
+// ============================================================
+
+export async function login() {
+
+  clearMessages();
+
+
+  const email =
+    getElement("loginEmail")?.value.trim() || "";
+
+  const password =
+    getElement("loginPassword")?.value || "";
+
+  const submitButton =
+    getElement("loginSubmit");
+
+
+  // ----------------------------------------------------------
+  // Validate
+  // ----------------------------------------------------------
+
+  const validationError =
+    validateLogin(
+      email,
+      password
+    );
+
+
+  if (validationError) {
+
+    showError(validationError);
+
+    return;
+  }
+
+
+  setButtonLoading(
+    submitButton,
+    true,
+    "جاري تسجيل الدخول..."
+  );
+
+
+  try {
+
+    // --------------------------------------------------------
+    // 1. Firebase Authentication
+    // --------------------------------------------------------
+
+    const credential =
+      await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+
+
+    const firebaseUser =
+      credential.user;
+
+
+    // --------------------------------------------------------
+    // 2. Get Firestore Profile
+    // --------------------------------------------------------
+
+    const profileRef =
+      doc(
+        db,
+        "users",
+        firebaseUser.uid
+      );
+
+
+    const profileSnap =
+      await getDoc(profileRef);
+
+
+    // --------------------------------------------------------
+    // 3. Profile missing
+    // --------------------------------------------------------
+
+    if (!profileSnap.exists()) {
+
+      await signOut(auth);
+
+      throw new Error(
+        "حساب Firebase موجود، ولكن ملف العضو غير موجود في Firestore. تم تسجيل الخروج لحماية الحساب."
+      );
+    }
+
+
+    const profile =
+      profileSnap.data();
+
+
+    // --------------------------------------------------------
+    // 4. Validate Role
+    // --------------------------------------------------------
+
+    const role =
+      profile.role || "member";
+
+
+    // --------------------------------------------------------
+    // 5. Redirect According To Role
+    // --------------------------------------------------------
+
+    showSuccess(
+      "تم تسجيل الدخول بنجاح. جاري فتح حسابك..."
+    );
+
+
+    setTimeout(() => {
+
+      if (
+        role === "admin" ||
+        role === "leadership"
+      ) {
+
+        window.location.replace(
+          LEADERSHIP_PAGE
+        );
+
+        return;
+      }
+
+
+      window.location.replace(
+        MEMBER_PAGE
+      );
+
+    }, 500);
+
+
+  } catch (error) {
+
+    showError(
+      translateFirebaseError(error)
+    );
+
+  } finally {
+
+    setButtonLoading(
+      submitButton,
+      false
+    );
+  }
+}
+
+
+// ============================================================
+// LOGOUT
+// ============================================================
+
+export async function logout() {
+
+  try {
+
+    // --------------------------------------------------------
+    // Always attempt Firebase sign out
+    // --------------------------------------------------------
+
+    await signOut(auth);
+
+  } catch (error) {
+
+    console.error(
+      "[CESS Auth] Logout error:",
+      error
+    );
+
+  } finally {
+
+    // --------------------------------------------------------
+    // IMPORTANT:
+    // Even if something unexpected happens, leave the
+    // protected page and return to login.
+    // --------------------------------------------------------
+
+    window.location.replace(
+      LOGIN_PAGE
+    );
+  }
+}
+
+
+// ============================================================
+// Check Existing Session On Login Page
+// ============================================================
+
+async function redirectIfAlreadyLoggedIn() {
+
+  try {
+
+    const {
+      user,
+      profile
+    } = await getCurrentSession();
+
+
+    if (!user || !profile) {
+      return;
+    }
+
+
+    const role =
+      profile.role || "member";
+
+
+    if (
+      role === "admin" ||
+      role === "leadership"
+    ) {
+
+      window.location.replace(
+        LEADERSHIP_PAGE
+      );
+
+      return;
+    }
+
+
+    window.location.replace(
+      MEMBER_PAGE
+    );
+
+  } catch (error) {
+
+    console.error(
+      "[CESS Auth] Existing-session check failed:",
+      error
+    );
+  }
+}
+
+
+// ============================================================
+// Form Event Binding
+// ============================================================
+
+function initializeAuthForms() {
+
+  const loginForm =
+    getElement("loginForm");
+
+  const signupForm =
+    getElement("signupForm");
+
+
+  // ----------------------------------------------------------
+  // Login
+  // ----------------------------------------------------------
+
+  if (loginForm) {
+
+    loginForm.addEventListener(
+      "submit",
+      async (event) => {
+
+        event.preventDefault();
+
+        await login();
+      }
+    );
+  }
+
+
+  // ----------------------------------------------------------
+  // Signup
+  // ----------------------------------------------------------
+
+  if (signupForm) {
+
+    signupForm.addEventListener(
+      "submit",
+      async (event) => {
+
+        event.preventDefault();
+
+        await signup();
+      }
+    );
+  }
+}
+
+
+// ============================================================
+// Global Logout Function
+// ============================================================
+//
+// Existing HTML buttons use:
+// onclick="cessLogout()"
+//
+// We keep this global function for compatibility.
+// ============================================================
+
+window.cessLogout = logout;
+
+
+// ============================================================
+// Global Login / Signup Access
+// ============================================================
+
+window.CESSAuth = {
+
+  login,
+
+  signup,
+
+  logout
+};
+
+
+// ============================================================
+// Initialize
+// ============================================================
+
+document.addEventListener(
+  "DOMContentLoaded",
+  () => {
+
+    initializeAuthForms();
+
+    // Only redirect automatically if we are on login page.
+    if (
+      window.location.pathname.endsWith(
+        LOGIN_PAGE
+      )
+    ) {
+
+      redirectIfAlreadyLoggedIn();
+    }
+  }
+);
