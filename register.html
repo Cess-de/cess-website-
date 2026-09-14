@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Create Account — CESS</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="responsive.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="nav-wrapper">
+    <a href="index.html" class="logo-link">
+      <img src="cess-logo.png" alt="CESS logo" onerror="this.style.display='none'">
+      <span class="logo-text-mark">
+        <span class="primary">CESS</span>
+        <span class="secondary" data-en="Civil Engineering Student Society" data-ar="جمعية طلاب الهندسة المدنية">Civil Engineering Student Society</span>
+      </span>
+    </a>
+    <button class="hamburger" id="hamburger" aria-label="Toggle navigation"><span></span><span></span><span></span></button>
+    <nav class="nav-menu" id="nav-menu">
+      <a href="index.html" data-en="Home" data-ar="الرئيسية">Home</a>
+      <a href="about.html" data-en="About" data-ar="عن الجمعية">About</a>
+      <a href="activities.html" data-en="Activities" data-ar="الأنشطة">Activities</a>
+      <a href="contact.html" data-en="Contact" data-ar="تواصل معنا">Contact</a>
+      <div class="nav-actions">
+        <button id="lang-toggle" aria-label="Switch language"><span id="lang-toggle-label">AR</span></button>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<div class="form-card">
+  <h1 class="text-center" data-en="Create Account" data-ar="إنشاء حساب">Create Account</h1>
+  <form id="register-form">
+    <div class="form-group">
+      <label for="name" data-en="Full Name" data-ar="الاسم الكامل">Full Name</label>
+      <input type="text" id="name" name="name" required autocomplete="name">
+    </div>
+    <div class="form-group">
+      <label for="email" data-en="Email" data-ar="البريد الإلكتروني">Email</label>
+      <input type="email" id="email" name="email" required autocomplete="email">
+    </div>
+    <div class="form-group">
+      <label for="cohort" data-en="Cohort (e.g. 2024)" data-ar="الدفعة (مثال: 2024)">Cohort (e.g. 2024)</label>
+      <input type="text" id="cohort" name="cohort" required placeholder="2024">
+    </div>
+    <div class="form-group">
+      <label for="department" data-en="Department" data-ar="القسم">Department</label>
+      <input type="text" id="department" name="department" value="Civil Engineering" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label for="password" data-en="Password" data-ar="كلمة المرور">Password</label>
+      <input type="password" id="password" name="password" required minlength="6" autocomplete="new-password">
+    </div>
+    <div class="form-group">
+      <label for="confirm-password" data-en="Confirm Password" data-ar="تأكيد كلمة المرور">Confirm Password</label>
+      <input type="password" id="confirm-password" name="confirm-password" required minlength="6" autocomplete="new-password">
+    </div>
+    <p class="form-error" id="register-error" hidden></p>
+    <button type="submit" class="btn btn-primary" style="width:100%;" data-en="Create Account" data-ar="إنشاء حساب">Create Account</button>
+  </form>
+  <p class="form-footer-link">
+    <span data-en="Already have an account?" data-ar="لديك حساب بالفعل؟">Already have an account?</span>
+    <a href="login.html" data-en="Login" data-ar="تسجيل الدخول">Login</a>
+  </p>
+</div>
+
+<!-- NOTE: role/status are never taken from this form — registerUser() in
+     js/core/session.js hard-sets role="member" and status="active" on the
+     server-side document, and firestore.rules enforces this on the server
+     even if the client were tampered with. This form has no field for
+     role or status by design. -->
+<script type="module" src="js/pages/auth-pages.js"></script>
+</body>
+</html>

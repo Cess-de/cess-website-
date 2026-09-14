@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Dashboard — CESS</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="responsive.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="nav-wrapper">
+    <a href="index.html" class="logo-link">
+      <img src="assets/cess-logo.png" alt="CESS logo" onerror="this.style.display='none'">
+      <span class="logo-text-mark">
+        <span class="primary">CESS</span>
+        <span class="secondary" data-en="Admin Dashboard" data-ar="لوحة الإدارة">Admin Dashboard</span>
+      </span>
+    </a>
+    <div class="nav-actions">
+      <button id="lang-toggle" aria-label="Switch language"><span id="lang-toggle-label">AR</span></button>
+      <button class="btn btn-outline" id="logout-btn" data-en="Logout" data-ar="تسجيل الخروج">Logout</button>
+    </div>
+  </div>
+</header>
+
+<div class="dashboard-layout">
+  <aside class="dashboard-sidebar">
+    <a href="#overview" class="active" data-en="Overview" data-ar="نظرة عامة">Overview</a>
+    <a href="#users" data-en="Users &amp; Roles" data-ar="المستخدمون والأدوار">Users &amp; Roles</a>
+    <a href="#activities" data-en="Activities" data-ar="الأنشطة">Activities</a>
+    <a href="#announcements" data-en="Announcements" data-ar="الإعلانات">Announcements</a>
+    <a href="#resources" data-en="Resources" data-ar="المصادر">Resources</a>
+    <a href="#history" data-en="History" data-ar="التاريخ">History</a>
+    <a href="#public-archive" data-en="Public Archive" data-ar="الأرشيف العام">Public Archive</a>
+    <a href="#meetings" data-en="Meetings" data-ar="الاجتماعات">Meetings</a>
+    <a href="#reports" data-en="Reports" data-ar="التقارير">Reports</a>
+    <a href="#committees" data-en="Committees" data-ar="اللجان">Committees</a>
+    <a href="#internal-documents" data-en="Internal Documents" data-ar="المستندات الداخلية">Internal Documents</a>
+    <a href="#handover" data-en="Handover" data-ar="التسليم">Handover</a>
+    <a href="#site-settings" data-en="Site Settings" data-ar="إعدادات الموقع">Site Settings</a>
+    <a href="#social-links" data-en="Social Links" data-ar="روابط التواصل">Social Links</a>
+    <a href="#statistics" data-en="Public Statistics" data-ar="الإحصائيات العامة">Public Statistics</a>
+  </aside>
+
+  <main class="dashboard-main">
+    <section id="overview">
+      <h1><span data-en="Welcome" data-ar="مرحبًا">Welcome</span>, <span id="admin-name">...</span></h1>
+      <p data-en="Full administrative control of the CESS platform." data-ar="التحكم الإداري الكامل في منصة CESS.">Full administrative control of the CESS platform.</p>
+    </section>
+
+    <!-- ---------- Users & Roles ---------- -->
+    <section id="users" class="mt-4">
+      <h2 data-en="Users &amp; Roles" data-ar="المستخدمون والأدوار">Users &amp; Roles</h2>
+      <p class="field-hint" data-en="You cannot change your own role or status." data-ar="لا يمكنك تغيير دورك أو حالتك الخاصة.">You cannot change your own role or status.</p>
+      <div class="form-group">
+        <input type="search" id="user-search-input" placeholder="Search by name, email, or cohort..." data-placeholder-en="Search by name, email, or cohort..." data-placeholder-ar="بحث بالاسم أو البريد الإلكتروني أو الدفعة...">
+      </div>
+      <div class="cms-item-list" id="users-table-body"></div>
+    </section>
+
+    <!-- ---------- Content Collections ---------- -->
+    <section id="activities" class="mt-4">
+      <div class="section-header-row">
+        <h2 data-en="Activities" data-ar="الأنشطة">Activities</h2>
+        <button class="btn btn-primary" id="new-activity-btn" data-en="+ New Activity" data-ar="+ نشاط جديد">+ New Activity</button>
+      </div>
+      <div class="cms-item-list" id="cms-activities"></div>
+    </section>
+
+    <section id="announcements" class="mt-4">
+      <div class="section-header-row">
+        <h2 data-en="Announcements" data-ar="الإعلانات">Announcements</h2>
+        <button class="btn btn-primary" id="new-announcement-btn" data-en="+ New Announcement" data-ar="+ إعلان جديد">+ New Announcement</button>
+      </div>
+      <div class="cms-item-list" id="cms-announcements"></div>
+    </section>
+
+    <section id="resources" class="mt-4">
+      <div class="section-header-row">
+        <h2 data-en="Resources" data-ar="المصادر">Resources</h2>
+        <button class="btn btn-primary" id="new-resource-btn" data-en="+ New Resource" data-ar="+ مورد جديد">+ New Resource</button>
+      </div>
+      <div class="cms-item-list" id="cms-resources"></div>
+    </section>
+
+    <section id="history" class="mt-4">
+      <div class="section-header-row">
+        <h2 data-en="History Timeline" data-ar="الجدول الزمني التاريخي">History Timeline</h2>
+        <button class="btn btn-primary" id="new-history-btn" data-en="+ New Entry" data-ar="+ عنصر جديد">+ New Entry</button>
+      </div>
+      <p class="field-hint" data-en="Sorted by the Order field, not by creation date." data-ar="مرتب حسب حقل الترتيب، وليس حسب تاريخ الإنشاء.">Sorted by the Order field, not by creation date.</p>
+      <div class="cms-item-list" id="cms-history"></div>
+    </section>
+
+    <section id="public-archive" class="mt-4">
+      <div class="section-header-row">
+        <h2 data-en="Public Archive" data-ar="الأرشيف العام">Public Archive</h2>
+        <button class="btn btn-primary" id="new-archive-btn" data-en="+ New Archive Item" data-ar="+ عنصر أرشيف جديد">+ New Archive Item</button>
+      </div>
+      <div class="cms-item-list" id="cms-archive"></div>
+    </section>
+
+    <section id="meetings" class="mt-4">
+      <div class="section-header-row">
+        <h2 data-en="Meetings" data-ar="الاجتماعات">Meetings</h2>
+        <button class="btn btn-primary" id="new-meeting-btn" data-en="+ New Meeting" data-ar="+ اجتماع جديد">+ New Meeting</button>
+      </div>
+      <div class="cms-item-list" id="cms-meetings"></div>
+    </section>
+
+    <section id="reports" class="mt-4">
+      <div class="section-header-row">
+        <h2 data-en="Reports" data-ar="التقارير">Reports</h2>
+        <button class="btn btn-primary" id="new-report-btn" data-en="+ New Report" data-ar="+ تقرير جديد">+ New Report</button>
+      </div>
+      <p class="field-hint" data-en="Only Admin can delete reports; leadership can create and edit them." data-ar="الإدارة فقط يمكنها حذف التقارير؛ يمكن للقيادة إنشاؤها وتعديلها.">Only Admin can delete reports; leadership can create and edit them.</p>
+      <div class="cms-item-list" id="cms-reports"></div>
+    </section>
+
+    <section id="committees" class="mt-4">
+      <div class="section-header-row">
+        <h2 data-en="Committees" data-ar="اللجان">Committees</h2>
+        <button class="btn btn-primary" id="new-committee-btn" data-en="+ New Committee" data-ar="+ لجنة جديدة">+ New Committee</button>
+      </div>
+      <div class="cms-item-list" id="cms-committees"></div>
+    </section>
+
+    <section id="internal-documents" class="mt-4">
+      <div class="section-header-row">
+        <h2 data-en="Internal Documents" data-ar="المستندات الداخلية">Internal Documents</h2>
+        <button class="btn btn-primary" id="new-internal-document-btn" data-en="+ New Document" data-ar="+ مستند جديد">+ New Document</button>
+      </div>
+      <div class="cms-item-list" id="cms-internal-documents"></div>
+    </section>
+
+    <section id="handover" class="mt-4">
+      <div class="section-header-row">
+        <h2 data-en="Handover" data-ar="التسليم">Handover</h2>
+        <button class="btn btn-primary" id="new-handover-btn" data-en="+ New Handover Item" data-ar="+ عنصر تسليم جديد">+ New Handover Item</button>
+      </div>
+      <div class="cms-item-list" id="cms-handover"></div>
+    </section>
+
+    <!-- ---------- Site Settings ---------- -->
+    <section id="site-settings" class="mt-4">
+      <h2 data-en="Site Settings" data-ar="إعدادات الموقع">Site Settings</h2>
+      <form id="site-settings-form" class="cms-form form-card form-card-inline">
+        <div class="form-group"><label data-en="Site Name (Arabic)" data-ar="اسم الموقع (عربي)">Site Name (Arabic)</label><input type="text" name="siteName_ar"></div>
+        <div class="form-group"><label data-en="Site Name (English)" data-ar="اسم الموقع (إنجليزي)">Site Name (English)</label><input type="text" name="siteName_en"></div>
+        <div class="form-group"><label data-en="Department (Arabic)" data-ar="القسم (عربي)">Department (Arabic)</label><input type="text" name="department_ar"></div>
+        <div class="form-group"><label data-en="Department (English)" data-ar="القسم (إنجليزي)">Department (English)</label><input type="text" name="department_en"></div>
+        <div class="form-group"><label data-en="University (Arabic)" data-ar="الجامعة (عربي)">University (Arabic)</label><input type="text" name="university_ar"></div>
+        <div class="form-group"><label data-en="University (English)" data-ar="الجامعة (إنجليزي)">University (English)</label><input type="text" name="university_en"></div>
+        <div class="form-group"><label data-en="Description (Arabic)" data-ar="الوصف (عربي)">Description (Arabic)</label><textarea name="description_ar" rows="3"></textarea></div>
+        <div class="form-group"><label data-en="Description (English)" data-ar="الوصف (إنجليزي)">Description (English)</label><textarea name="description_en" rows="3"></textarea></div>
+        <div class="form-group"><label data-en="Contact Email" data-ar="البريد الإلكتروني للتواصل">Contact Email</label><input type="email" name="contactEmail"></div>
+        <div class="form-group"><label data-en="Contact Phone" data-ar="هاتف التواصل">Contact Phone</label><input type="tel" name="contactPhone"></div>
+        <p class="field-hint" data-en="Logo/favicon uploads are managed via the media library once the Apps Script gateway is connected." data-ar="يتم إدارة رفع الشعار وأيقونة الموقع عبر مكتبة الوسائط بعد ربط بوابة Apps Script.">Logo/favicon uploads are managed via the media library once the Apps Script gateway is connected.</p>
+        <button type="submit" class="btn btn-primary" data-en="Save Site Settings" data-ar="حفظ إعدادات الموقع">Save Site Settings</button>
+      </form>
+    </section>
+
+    <!-- ---------- Social Links ---------- -->
+    <section id="social-links" class="mt-4">
+      <h2 data-en="Social Links" data-ar="روابط التواصل">Social Links</h2>
+      <form id="social-links-form" class="cms-form form-card form-card-inline">
+        <div class="form-group"><label>Facebook</label><input type="url" name="facebook" placeholder="https://"></div>
+        <div class="form-group"><label>Instagram</label><input type="url" name="instagram" placeholder="https://"></div>
+        <div class="form-group"><label>Telegram</label><input type="url" name="telegram" placeholder="https://"></div>
+        <div class="form-group"><label>WhatsApp</label><input type="url" name="whatsapp" placeholder="https://"></div>
+        <div class="form-group"><label>LinkedIn</label><input type="url" name="linkedin" placeholder="https://"></div>
+        <div class="form-group"><label>YouTube</label><input type="url" name="youtube" placeholder="https://"></div>
+        <button type="submit" class="btn btn-primary" data-en="Save Social Links" data-ar="حفظ روابط التواصل">Save Social Links</button>
+      </form>
+    </section>
+
+    <!-- ---------- Public Statistics ---------- -->
+    <section id="statistics" class="mt-4">
+      <h2 data-en="Public Statistics" data-ar="الإحصائيات العامة">Public Statistics</h2>
+      <div class="stats-chip-row">
+        <div class="stat-chip"><strong id="stat-preview-activities">—</strong><span data-en="Activities" data-ar="الأنشطة">Activities</span></div>
+        <div class="stat-chip"><strong id="stat-preview-members">—</strong><span data-en="Members" data-ar="الأعضاء">Members</span></div>
+        <div class="stat-chip"><strong id="stat-preview-resources">—</strong><span data-en="Resources" data-ar="الموارد">Resources</span></div>
+        <div class="stat-chip"><strong id="stat-preview-years">—</strong><span data-en="Years" data-ar="السنوات">Years</span></div>
+      </div>
+      <button class="btn btn-outline mt-2" id="refresh-stats-btn" data-en="Refresh from Live Data" data-ar="تحديث من البيانات الحية">Refresh from Live Data</button>
+
+      <h3 class="mt-4" data-en="Manual Override" data-ar="التجاوز اليدوي">Manual Override</h3>
+      <p class="field-hint" data-en="Use only if automatic counts are unavailable or misleading." data-ar="استخدم هذا فقط إذا كانت الأعداد التلقائية غير متاحة أو مضللة.">Use only if automatic counts are unavailable or misleading.</p>
+      <form id="manual-stats-form" class="cms-form form-card form-card-inline">
+        <div class="form-group"><label data-en="Activities Count" data-ar="عدد الأنشطة">Activities Count</label><input type="number" name="activitiesCount" min="0"></div>
+        <div class="form-group"><label data-en="Members Count" data-ar="عدد الأعضاء">Members Count</label><input type="number" name="membersCount" min="0"></div>
+        <div class="form-group"><label data-en="Years Count" data-ar="عدد السنوات">Years Count</label><input type="number" name="yearsCount" min="0"></div>
+        <div class="form-group"><label data-en="Resources Count" data-ar="عدد الموارد">Resources Count</label><input type="number" name="resourcesCount" min="0"></div>
+        <button type="submit" class="btn btn-outline" data-en="Save Manual Statistics" data-ar="حفظ الإحصائيات اليدوية">Save Manual Statistics</button>
+      </form>
+    </section>
+  </main>
+</div>
+
+<script type="module" src="js/pages/admin.js"></script>
+</body>
+</html>

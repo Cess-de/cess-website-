@@ -1,0 +1,189 @@
+/* =========================================================
+   CESS — Responsive Overrides
+   Mobile-first: base styles in style.css already work on
+   small screens. This file adjusts navigation for mobile
+   and improves layout on larger breakpoints.
+   ========================================================= */
+
+/* ---------- Mobile Navigation (≤ 860px) ---------- */
+
+@media (max-width: 860px) {
+  .hamburger {
+    display: flex;
+  }
+
+  .nav-menu {
+    position: absolute;
+    top: 100%;
+    inset-inline: 0;
+    background: var(--color-bg);
+    border-bottom: 1px solid var(--color-border);
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.2s ease;
+  }
+
+  .nav-menu.open {
+    max-height: 520px;
+  }
+
+  .nav-menu a {
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .nav-actions {
+    flex-direction: column;
+    align-items: stretch;
+    padding: var(--space-3) var(--space-4);
+    gap: var(--space-2);
+  }
+
+  .nav-actions .btn {
+    text-align: center;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- Dashboard: stack sidebar on mobile ---------- */
+
+@media (max-width: 860px) {
+  .dashboard-layout {
+    flex-direction: column;
+  }
+
+  .dashboard-sidebar {
+    width: 100%;
+    border-inline-end: none;
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    overflow-x: auto;
+    gap: var(--space-1);
+    padding: var(--space-2);
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .dashboard-sidebar a {
+    white-space: nowrap;
+    margin-bottom: 0;
+  }
+
+  .dashboard-main {
+    padding: var(--space-4) var(--space-3);
+  }
+}
+
+/* ---------- Small phones: tighten spacing ---------- */
+
+@media (max-width: 480px) {
+  .container {
+    padding: 0 var(--space-3);
+  }
+
+  .hero {
+    padding: var(--space-5) var(--space-3);
+  }
+
+  .form-card {
+    margin: var(--space-4) auto;
+    padding: var(--space-4);
+    border-radius: 0;
+    border-inline: none;
+    box-shadow: none;
+  }
+}
+
+/* ---------- Larger screens: roomier grid ---------- */
+
+@media (min-width: 1200px) {
+  .container {
+    padding: 0 var(--space-5);
+  }
+}
+
+/* ---------- Print: hide non-content chrome ---------- */
+
+@media print {
+  .site-header,
+  .site-footer,
+  .hamburger,
+  #lang-toggle {
+    display: none;
+  }
+}
+
+/* ---------- CMS item cards: stack on mobile, full-width touch targets ---------- */
+
+@media (max-width: 640px) {
+  .cms-item-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .cms-item-actions {
+    justify-content: stretch;
+  }
+
+  .cms-item-actions .btn {
+    flex: 1;
+    min-width: 0;
+    text-align: center;
+    padding: 0.55rem 0.5rem; /* comfortable touch target, no hover/right-click dependency */
+  }
+
+  .section-header-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .section-header-row .btn {
+    width: 100%;
+  }
+}
+
+/* ---------- CMS editor modal: near full-screen on phones ---------- */
+
+@media (max-width: 640px) {
+  .modal-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .modal-panel {
+    max-width: 100%;
+    width: 100%;
+    max-height: 95vh;
+    border-radius: var(--radius) var(--radius) 0 0;
+  }
+
+  .media-list-preview {
+    justify-content: flex-start;
+  }
+}
+
+/* ---------- Stat chip row: two-up on narrow phones ---------- */
+
+@media (max-width: 480px) {
+  .stats-chip-row {
+    justify-content: space-between;
+  }
+
+  .stat-chip {
+    flex: 1 1 calc(50% - var(--space-2));
+    min-width: 0;
+  }
+}
+
+/* ---------- Form card inline (settings panels) on mobile ---------- */
+
+@media (max-width: 480px) {
+  .form-card-inline {
+    padding: var(--space-3);
+  }
+}

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login — CESS</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="responsive.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="nav-wrapper">
+    <a href="index.html" class="logo-link">
+      <img src="cess-logo.png" alt="CESS logo" onerror="this.style.display='none'">
+      <span class="logo-text-mark">
+        <span class="primary">CESS</span>
+        <span class="secondary" data-en="Civil Engineering Student Society" data-ar="جمعية طلاب الهندسة المدنية">Civil Engineering Student Society</span>
+      </span>
+    </a>
+    <button class="hamburger" id="hamburger" aria-label="Toggle navigation"><span></span><span></span><span></span></button>
+    <nav class="nav-menu" id="nav-menu">
+      <a href="index.html" data-en="Home" data-ar="الرئيسية">Home</a>
+      <a href="about.html" data-en="About" data-ar="عن الجمعية">About</a>
+      <a href="activities.html" data-en="Activities" data-ar="الأنشطة">Activities</a>
+      <a href="contact.html" data-en="Contact" data-ar="تواصل معنا">Contact</a>
+      <div class="nav-actions">
+        <button id="lang-toggle" aria-label="Switch language"><span id="lang-toggle-label">AR</span></button>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<div class="form-card">
+  <h1 class="text-center" data-en="Login" data-ar="تسجيل الدخول">Login</h1>
+  <p class="form-notice" id="auth-notice" hidden></p>
+  <form id="login-form">
+    <div class="form-group">
+      <label for="email" data-en="Email" data-ar="البريد الإلكتروني">Email</label>
+      <input type="email" id="email" name="email" required autocomplete="email">
+    </div>
+    <div class="form-group">
+      <label for="password" data-en="Password" data-ar="كلمة المرور">Password</label>
+      <input type="password" id="password" name="password" required autocomplete="current-password">
+    </div>
+    <p class="form-error" id="login-error" hidden></p>
+    <button type="submit" class="btn btn-primary" style="width:100%;" data-en="Login" data-ar="تسجيل الدخول">Login</button>
+  </form>
+  <p class="form-footer-link">
+    <a href="#" id="password-reset-link" data-en="Forgot password?" data-ar="نسيت كلمة المرور؟">Forgot password?</a>
+  </p>
+  <p class="form-footer-link">
+    <span data-en="Don't have an account?" data-ar="ليس لديك حساب؟">Don't have an account?</span>
+    <a href="register.html" data-en="Create one" data-ar="أنشئ حسابًا">Create one</a>
+  </p>
+</div>
+
+<script type="module" src="js/pages/auth-pages.js"></script>
+</body>
+</html>

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Member Dashboard — CESS</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="responsive.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="nav-wrapper">
+    <a href="index.html" class="logo-link">
+      <img src="assets/cess-logo.png" alt="CESS logo" onerror="this.style.display='none'">
+      <span class="logo-text-mark">
+        <span class="primary">CESS</span>
+        <span class="secondary" data-en="Member Dashboard" data-ar="لوحة العضو">Member Dashboard</span>
+      </span>
+    </a>
+    <div class="nav-actions">
+      <button id="lang-toggle" aria-label="Switch language"><span id="lang-toggle-label">AR</span></button>
+      <button class="btn btn-outline" id="logout-btn" data-en="Logout" data-ar="تسجيل الخروج">Logout</button>
+    </div>
+  </div>
+</header>
+
+<div class="dashboard-layout">
+  <aside class="dashboard-sidebar">
+    <a href="#welcome" class="active" data-en="Welcome" data-ar="مرحبًا">Welcome</a>
+    <a href="#announcements" data-en="Announcements" data-ar="الإعلانات">Announcements</a>
+    <a href="#activities" data-en="Upcoming Activities" data-ar="الأنشطة القادمة">Upcoming Activities</a>
+    <a href="#resources" data-en="Resources" data-ar="المصادر">Resources</a>
+    <a href="#profile" data-en="Profile" data-ar="الملف الشخصي">Profile</a>
+  </aside>
+
+  <main class="dashboard-main">
+    <section id="welcome">
+      <h1><span data-en="Welcome" data-ar="مرحبًا">Welcome</span>, <span id="member-welcome-name">...</span></h1>
+      <p data-en="Here's what's happening in CESS." data-ar="إليك آخر مستجدات CESS.">Here's what's happening in CESS.</p>
+      <div class="cms-item-meta">
+        <span class="badge badge-accent" id="member-role-badge"></span>
+        <span data-en="Cohort:" data-ar="الدفعة:">Cohort:</span> <span id="member-cohort"></span>
+      </div>
+    </section>
+
+    <section id="announcements" class="mt-4">
+      <h2 data-en="Announcements" data-ar="الإعلانات">Announcements</h2>
+      <div class="grid" id="member-announcements"></div>
+    </section>
+
+    <section id="activities" class="mt-4">
+      <h2 data-en="Upcoming Activities" data-ar="الأنشطة القادمة">Upcoming Activities</h2>
+      <div class="grid" id="member-activities"></div>
+    </section>
+
+    <section id="resources" class="mt-4">
+      <h2 data-en="Resources" data-ar="المصادر">Resources</h2>
+      <div class="grid" id="member-resources"></div>
+    </section>
+
+    <section id="profile" class="mt-4">
+      <h2 data-en="Profile" data-ar="الملف الشخصي">Profile</h2>
+      <form id="profile-form" class="cms-form form-card form-card-inline">
+        <div class="form-group">
+          <label for="profile-email" data-en="Email" data-ar="البريد الإلكتروني">Email</label>
+          <input type="email" id="profile-email" name="email-display" disabled>
+          <p class="field-hint" data-en="Email cannot be changed here. Contact leadership if needed." data-ar="لا يمكن تغيير البريد الإلكتروني من هنا. تواصل مع القيادة إذا لزم الأمر.">Email cannot be changed here. Contact leadership if needed.</p>
+        </div>
+        <div class="form-group">
+          <label for="profile-name" data-en="Full Name" data-ar="الاسم الكامل">Full Name</label>
+          <input type="text" id="profile-name" name="name" required>
+        </div>
+        <div class="form-group">
+          <label for="profile-cohort" data-en="Cohort" data-ar="الدفعة">Cohort</label>
+          <input type="text" id="profile-cohort" name="cohort">
+        </div>
+        <div class="form-group">
+          <label for="profile-department" data-en="Department" data-ar="القسم">Department</label>
+          <input type="text" id="profile-department" name="department">
+        </div>
+        <div class="form-group">
+          <label for="profile-phone" data-en="Phone" data-ar="الهاتف">Phone</label>
+          <input type="tel" id="profile-phone" name="phone">
+        </div>
+        <div class="form-group">
+          <label for="profile-bio" data-en="Bio" data-ar="نبذة">Bio</label>
+          <textarea id="profile-bio" name="bio" rows="3"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary" data-en="Save Profile" data-ar="حفظ الملف الشخصي">Save Profile</button>
+      </form>
+    </section>
+  </main>
+</div>
+
+<script type="module" src="js/pages/member.js"></script>
+</body>
+</html>
