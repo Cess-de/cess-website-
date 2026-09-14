@@ -1,821 +1,937 @@
-// ============================================================
-// CESS — Authentication System
-// Civil Engineering Student Society
-// ============================================================
-
-import { auth, db } from "./firebase-config.js";
-import {
-  getCurrentSession
-} from "./session.js";
-
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut,
-  updateProfile,
-  deleteUser
-} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-
-import {
-  doc,
-  setDoc,
-  getDoc,
-  serverTimestamp
-} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
-
-
-// ============================================================
-// Configuration
-// ============================================================
-
-const LOGIN_PAGE = "login.html";
-const MEMBER_PAGE = "member-dashboard.html";
-const LEADERSHIP_PAGE = "leadership-dashboard.html";
-
-
-// ============================================================
-// DOM Helpers
-// ============================================================
-
-function getElement(id) {
-  return document.getElementById(id);
-}
-
-
-function showError(message) {
-
-  const errorBox = getElement("authError");
-
-  if (!errorBox) {
-    console.error("[CESS Auth]", message);
-    return;
-  }
-
-  errorBox.textContent = message;
-  errorBox.style.display = "block";
-
-  const successBox = getElement("authSuccess");
-
-  if (successBox) {
-    successBox.style.display = "none";
-  }
-}
-
-
-function showSuccess(message) {
-
-  const successBox = getElement("authSuccess");
-
-  if (!successBox) {
-    console.log("[CESS Auth]", message);
-    return;
-  }
-
-  successBox.textContent = message;
-  successBox.style.display = "block";
-
-  const errorBox = getElement("authError");
-
-  if (errorBox) {
-    errorBox.style.display = "none";
-  }
-}
-
-
-function clearMessages() {
-
-  const errorBox = getElement("authError");
-
-  if (errorBox) {
-    errorBox.textContent = "";
-    errorBox.style.display = "none";
-  }
-
-  const successBox = getElement("authSuccess");
-
-  if (successBox) {
-    successBox.textContent = "";
-    successBox.style.display = "none";
-  }
-}
-
-
-function setButtonLoading(button, loading, loadingText) {
-
-  if (!button) {
-    return;
-  }
-
-  if (loading) {
-
-    button.dataset.originalText =
-      button.textContent;
-
-    button.disabled = true;
-
-    button.textContent =
-      loadingText || "جاري التنفيذ...";
-
-  } else {
-
-    button.disabled = false;
-
-    button.textContent =
-      button.dataset.originalText ||
-      button.textContent;
-  }
-}
-
-
-// ============================================================
-// Firebase Error Translation
-// ============================================================
-
-function translateFirebaseError(error) {
-
-  console.error("[CESS Auth Error]", error);
-
-  const code = error?.code || "";
-
-  switch (code) {
-
-    case "auth/email-already-in-use":
-      return "هذا البريد الإلكتروني مسجل بالفعل. جرّب تسجيل الدخول بدلًا من إنشاء حساب جديد.";
-
-    case "auth/invalid-email":
-      return "البريد الإلكتروني غير صحيح.";
-
-    case "auth/weak-password":
-      return "كلمة المرور ضعيفة. استخدم كلمة مرور أقوى.";
-
-    case "auth/password-does-not-meet-requirements":
-      return "كلمة المرور لا تستوفي متطلبات الأمان المطلوبة.";
-
-    case "auth/user-not-found":
-      return "لا يوجد حساب بهذا البريد الإلكتروني.";
-
-    case "auth/wrong-password":
-    case "auth/invalid-credential":
-      return "البريد الإلكتروني أو كلمة المرور غير صحيحة.";
-
-    case "auth/user-disabled":
-      return "هذا الحساب تم تعطيله. تواصل مع إدارة CESS.";
-
-    case "auth/too-many-requests":
-      return "تمت محاولات كثيرة. انتظر قليلًا ثم حاول مرة أخرى.";
-
-    case "auth/network-request-failed":
-      return "تعذر الاتصال بخدمة Firebase. تأكد من الإنترنت وحاول مرة أخرى.";
-
-    case "auth/operation-not-allowed":
-      return "تسجيل الدخول بالبريد الإلكتروني غير مفعّل في Firebase.";
-
-    case "permission-denied":
-      return "تم رفض الوصول إلى قاعدة البيانات. تحقق من Firestore Rules.";
-
-    case "failed-precondition":
-      return "قاعدة البيانات غير جاهزة بالشكل المطلوب.";
-
-    case "unavailable":
-      return "خدمة قاعدة البيانات غير متاحة حاليًا. حاول مرة أخرى.";
-
-    default:
-      return error?.message ||
-        "حدث خطأ غير متوقع. حاول مرة أخرى.";
-  }
-}
-
-
-// ============================================================
-// Validate Signup Form
-// ============================================================
-
-function validateSignup(name, email, cohort, password) {
-
-  if (!name.trim()) {
-    return "اكتب الاسم الكامل.";
-  }
-
-  if (!email.trim()) {
-    return "اكتب البريد الإلكتروني.";
-  }
-
-  if (!cohort.trim()) {
-    return "اكتب الدفعة أو الفوج.";
-  }
-
-  if (!password) {
-    return "اكتب كلمة المرور.";
-  }
-
-  if (password.length < 6) {
-    return "كلمة المرور يجب أن تكون 6 أحرف على الأقل.";
-  }
-
-  return null;
-}
-
-
-// ============================================================
-// Validate Login Form
-// ============================================================
-
-function validateLogin(email, password) {
-
-  if (!email.trim()) {
-    return "اكتب البريد الإلكتروني.";
-  }
-
-  if (!password) {
-    return "اكتب كلمة المرور.";
-  }
-
-  return null;
-}
-
-
-// ============================================================
-// Create Firestore User Profile
-// ============================================================
-
-async function createUserProfile(firebaseUser, data) {
-
-  const userRef = doc(
-    db,
-    "users",
-    firebaseUser.uid
-  );
-
-
-  const profile = {
-
-    uid: firebaseUser.uid,
-
-    name: data.name,
-
-    email: firebaseUser.email,
-
-    cohort: data.cohort,
-
-    department: "Civil Engineering",
-
-    role: "member",
-
-    status: "active",
-
-    joinedAt: serverTimestamp(),
-
-    updatedAt: serverTimestamp()
-  };
-
-
-  await setDoc(
-    userRef,
-    profile
-  );
-
-
-  // ----------------------------------------------------------
-  // Verify that the profile really exists
-  // ----------------------------------------------------------
-
-  const verification =
-    await getDoc(userRef);
-
-
-  if (!verification.exists()) {
-
-    throw new Error(
-      "تم إنشاء حساب Firebase لكن لم يتم إنشاء ملف العضو في Firestore."
-    );
-  }
-
-
-  return verification.data();
-}
-
-
-// ============================================================
-// SIGN UP
-// ============================================================
-
-export async function signup() {
-
-  clearMessages();
-
-
-  const name =
-    getElement("signupName")?.value.trim() || "";
-
-  const email =
-    getElement("signupEmail")?.value.trim() || "";
-
-  const cohort =
-    getElement("signupCohort")?.value.trim() || "";
-
-  const password =
-    getElement("signupPassword")?.value || "";
-
-  const submitButton =
-    getElement("signupSubmit");
-
-
-  // ----------------------------------------------------------
-  // Validate
-  // ----------------------------------------------------------
-
-  const validationError =
-    validateSignup(
-      name,
-      email,
-      cohort,
-      password
-    );
-
-
-  if (validationError) {
-
-    showError(validationError);
-
-    return;
-  }
-
-
-  setButtonLoading(
-    submitButton,
-    true,
-    "جاري إنشاء الحساب..."
-  );
-
-
-  let firebaseUser = null;
-
-
-  try {
-
-    // --------------------------------------------------------
-    // 1. Create Firebase Authentication Account
-    // --------------------------------------------------------
-
-    const credential =
-      await createUserWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
-
-
-    firebaseUser =
-      credential.user;
-
-
-    // --------------------------------------------------------
-    // 2. Add Display Name
-    // --------------------------------------------------------
-
-    await updateProfile(
-      firebaseUser,
-      {
-        displayName: name
-      }
-    );
-
-
-    // --------------------------------------------------------
-    // 3. Create Firestore Profile
-    // --------------------------------------------------------
-
-    await createUserProfile(
-      firebaseUser,
-      {
-        name,
-        email,
-        cohort
-      }
-    );
-
-
-    // --------------------------------------------------------
-    // 4. Force-refresh session information
-    // --------------------------------------------------------
-
-    await new Promise(
-      (resolve) => setTimeout(resolve, 300)
-    );
-
-
-    // --------------------------------------------------------
-    // 5. Success
-    // --------------------------------------------------------
-
-    showSuccess(
-      "تم إنشاء حسابك بنجاح. سيتم تحويلك إلى لوحة العضو..."
-    );
-
-
-    // --------------------------------------------------------
-    // 6. Redirect
-    // --------------------------------------------------------
-
-    setTimeout(() => {
-
-      window.location.replace(
-        MEMBER_PAGE
-      );
-
-    }, 800);
-
-
-  } catch (error) {
-
-    // --------------------------------------------------------
-    // IMPORTANT:
-    // If Auth account was created but Firestore failed,
-    // remove the newly-created Auth account.
-    // This prevents orphan accounts.
-    // --------------------------------------------------------
-
-    if (firebaseUser) {
-
-      try {
-
-        await deleteUser(firebaseUser);
-
-        console.warn(
-          "[CESS Auth] Rolled back newly-created Auth user."
-        );
-
-      } catch (rollbackError) {
-
-        console.error(
-          "[CESS Auth] Rollback failed:",
-          rollbackError
-        );
-      }
-    }
-
-
-    try {
-
-      await signOut(auth);
-
-    } catch (signOutError) {
-
-      console.error(
-        "[CESS Auth] Cleanup signOut failed:",
-        signOutError
-      );
-    }
-
-
-    showError(
-      translateFirebaseError(error)
-    );
-
-
-  } finally {
-
-    setButtonLoading(
-      submitButton,
-      false
-    );
-  }
-}
-
-
-// ============================================================
-// LOGIN
-// ============================================================
-
-export async function login() {
-
-  clearMessages();
-
-
-  const email =
-    getElement("loginEmail")?.value.trim() || "";
-
-  const password =
-    getElement("loginPassword")?.value || "";
-
-  const submitButton =
-    getElement("loginSubmit");
-
-
-  // ----------------------------------------------------------
-  // Validate
-  // ----------------------------------------------------------
-
-  const validationError =
-    validateLogin(
-      email,
-      password
-    );
-
-
-  if (validationError) {
-
-    showError(validationError);
-
-    return;
-  }
-
-
-  setButtonLoading(
-    submitButton,
-    true,
-    "جاري تسجيل الدخول..."
-  );
-
-
-  try {
-
-    // --------------------------------------------------------
-    // 1. Firebase Authentication
-    // --------------------------------------------------------
-
-    const credential =
-      await signInWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
-
-
-    const firebaseUser =
-      credential.user;
-
-
-    // --------------------------------------------------------
-    // 2. Get Firestore Profile
-    // --------------------------------------------------------
-
-    const profileRef =
-      doc(
-        db,
-        "users",
-        firebaseUser.uid
-      );
-
-
-    const profileSnap =
-      await getDoc(profileRef);
-
-
-    // --------------------------------------------------------
-    // 3. Profile missing
-    // --------------------------------------------------------
-
-    if (!profileSnap.exists()) {
-
-      await signOut(auth);
-
-      throw new Error(
-        "حساب Firebase موجود، ولكن ملف العضو غير موجود في Firestore. تم تسجيل الخروج لحماية الحساب."
-      );
-    }
-
-
-    const profile =
-      profileSnap.data();
-
-
-    // --------------------------------------------------------
-    // 4. Validate Role
-    // --------------------------------------------------------
-
-    const role =
-      profile.role || "member";
-
-
-    // --------------------------------------------------------
-    // 5. Redirect According To Role
-    // --------------------------------------------------------
-
-    showSuccess(
-      "تم تسجيل الدخول بنجاح. جاري فتح حسابك..."
-    );
-
-
-    setTimeout(() => {
-
-      if (
-        role === "admin" ||
-        role === "leadership"
-      ) {
-
-        window.location.replace(
-          LEADERSHIP_PAGE
-        );
-
-        return;
-      }
-
-
-      window.location.replace(
-        MEMBER_PAGE
-      );
-
-    }, 500);
-
-
-  } catch (error) {
-
-    showError(
-      translateFirebaseError(error)
-    );
-
-  } finally {
-
-    setButtonLoading(
-      submitButton,
-      false
-    );
-  }
-}
-
-
-// ============================================================
-// LOGOUT
-// ============================================================
-
-export async function logout() {
-
-  try {
-
-    // --------------------------------------------------------
-    // Always attempt Firebase sign out
-    // --------------------------------------------------------
-
-    await signOut(auth);
-
-  } catch (error) {
-
-    console.error(
-      "[CESS Auth] Logout error:",
-      error
-    );
-
-  } finally {
-
-    // --------------------------------------------------------
-    // IMPORTANT:
-    // Even if something unexpected happens, leave the
-    // protected page and return to login.
-    // --------------------------------------------------------
-
-    window.location.replace(
-      LOGIN_PAGE
-    );
-  }
-}
-
-
-// ============================================================
-// Check Existing Session On Login Page
-// ============================================================
-
-async function redirectIfAlreadyLoggedIn() {
-
-  try {
-
-    const {
-      user,
-      profile
-    } = await getCurrentSession();
-
-
-    if (!user || !profile) {
-      return;
-    }
-
-
-    const role =
-      profile.role || "member";
-
-
-    if (
-      role === "admin" ||
-      role === "leadership"
-    ) {
-
-      window.location.replace(
-        LEADERSHIP_PAGE
-      );
-
-      return;
-    }
-
-
-    window.location.replace(
-      MEMBER_PAGE
-    );
-
-  } catch (error) {
-
-    console.error(
-      "[CESS Auth] Existing-session check failed:",
-      error
-    );
-  }
-}
-
-
-// ============================================================
-// Form Event Binding
-// ============================================================
-
-function initializeAuthForms() {
-
-  const loginForm =
-    getElement("loginForm");
-
-  const signupForm =
-    getElement("signupForm");
-
-
-  // ----------------------------------------------------------
-  // Login
-  // ----------------------------------------------------------
-
-  if (loginForm) {
-
-    loginForm.addEventListener(
-      "submit",
-      async (event) => {
-
-        event.preventDefault();
-
-        await login();
-      }
-    );
-  }
-
-
-  // ----------------------------------------------------------
-  // Signup
-  // ----------------------------------------------------------
-
-  if (signupForm) {
-
-    signupForm.addEventListener(
-      "submit",
-      async (event) => {
-
-        event.preventDefault();
-
-        await signup();
-      }
-    );
-  }
-}
-
-
-// ============================================================
-// Global Logout Function
-// ============================================================
-//
-// Existing HTML buttons use:
-// onclick="cessLogout()"
-//
-// We keep this global function for compatibility.
-// ============================================================
-
-window.cessLogout = logout;
-
-
-// ============================================================
-// Global Login / Signup Access
-// ============================================================
-
-window.CESSAuth = {
-
-  login,
-
-  signup,
-
-  logout
+/* =========================================================
+   CESS — Authentication & Role Authority
+   =========================================================
+   Runtime:
+   - Firebase Compat 10.12.2
+   - ES Module
+   - Email / Password Authentication
+   - Firestore user profiles
+   - Role-based access
+   - Status-based access
+
+   Requires:
+   - firebase-config.js loaded before this module
+
+   firebase-config.js provides:
+   - window.auth
+   - window.db
+   - window.CESS_CONFIG
+   ========================================================= */
+
+
+/* =========================================================
+   CONFIG
+   ========================================================= */
+
+const CESS_CONFIG = window.CESS_CONFIG || {};
+
+const COLLECTIONS = CESS_CONFIG.collections || {};
+
+const ROLES = CESS_CONFIG.roles || {
+  MEMBER: "member",
+  LEADERSHIP: "leadership",
+  ADMIN: "admin"
+};
+
+const STATUSES = CESS_CONFIG.statuses || {
+  ACTIVE: "active",
+  INACTIVE: "inactive",
+  SUSPENDED: "suspended"
 };
 
 
-// ============================================================
-// Initialize
-// ============================================================
+/* =========================================================
+   FIREBASE HANDLES
+   ========================================================= */
 
-document.addEventListener(
-  "DOMContentLoaded",
-  () => {
+const auth = window.auth;
+const db = window.db;
 
-    initializeAuthForms();
+if (!auth || !db) {
+  throw new Error(
+    "[CESS Auth] Firebase is not initialized. " +
+    "Load firebase-config.js before auth.js."
+  );
+}
 
-    // Only redirect automatically if we are on login page.
-    if (
-      window.location.pathname.endsWith(
-        LOGIN_PAGE
+
+/* =========================================================
+   INTERNAL STATE
+   ========================================================= */
+
+let profileCache = null;
+
+let authResolved = false;
+
+let resolveAuthReady;
+
+const authReady = new Promise((resolve) => {
+  resolveAuthReady = resolve;
+});
+
+
+/* =========================================================
+   PROFILE
+   ========================================================= */
+
+/**
+ * Get the Firestore profile for the currently
+ * authenticated Firebase user.
+ *
+ * @param {boolean} force
+ * @returns {Promise<Object|null>}
+ */
+async function getCurrentUserProfile(force = false) {
+
+  if (profileCache && !force) {
+    return profileCache;
+  }
+
+  const user = auth.currentUser;
+
+  if (!user) {
+    profileCache = null;
+    return null;
+  }
+
+  try {
+
+    const collectionName =
+      COLLECTIONS.USERS || "users";
+
+    const snap = await db
+      .collection(collectionName)
+      .doc(user.uid)
+      .get();
+
+    if (!snap.exists) {
+
+      profileCache = null;
+
+      return null;
+    }
+
+    profileCache = {
+      uid: user.uid,
+      ...snap.data()
+    };
+
+    return profileCache;
+
+  } catch (error) {
+
+    console.error(
+      "[CESS Auth] Failed to fetch user profile:",
+      error
+    );
+
+    return null;
+  }
+}
+
+
+/* =========================================================
+   CACHE
+   ========================================================= */
+
+function clearProfileCache() {
+
+  profileCache = null;
+}
+
+
+/* =========================================================
+   AUTH STATE
+   ========================================================= */
+
+auth.onAuthStateChanged((user) => {
+
+  authResolved = true;
+
+  if (!user) {
+    clearProfileCache();
+  }
+
+  if (typeof resolveAuthReady === "function") {
+    resolveAuthReady(user);
+  }
+});
+
+
+/**
+ * Wait until Firebase Auth finishes its
+ * initial state resolution.
+ *
+ * @returns {Promise<firebase.User|null>}
+ */
+function ready() {
+
+  if (authResolved) {
+    return Promise.resolve(auth.currentUser);
+  }
+
+  return authReady;
+}
+
+
+/* =========================================================
+   CURRENT USER
+   ========================================================= */
+
+function getLoggedInUser() {
+
+  return auth.currentUser;
+}
+
+
+/* =========================================================
+   ROLE REDIRECT
+   ========================================================= */
+
+function redirectToRoleHome(role) {
+
+  switch (role) {
+
+    case ROLES.ADMIN:
+      window.location.replace("admin.html");
+      return;
+
+    case ROLES.LEADERSHIP:
+      window.location.replace("leadership.html");
+      return;
+
+    case ROLES.MEMBER:
+      window.location.replace("member.html");
+      return;
+
+    default:
+      window.location.replace("index.html");
+      return;
+  }
+}
+
+
+/* =========================================================
+   REGISTRATION
+   ========================================================= */
+
+/**
+ * Register a new CESS member.
+ *
+ * Firestore document:
+ * users/{uid}
+ *
+ * Required fields:
+ * - uid
+ * - name
+ * - email
+ * - batch
+ * - cohort
+ * - role
+ * - status
+ * - createdAt
+ */
+async function registerUser(options = {}) {
+
+  const {
+    fullName,
+    email,
+    password,
+    batch
+  } = options;
+
+
+  if (!fullName || !email || !password) {
+
+    throw new Error(
+      "missing-registration-fields"
+    );
+  }
+
+
+  /* -----------------------------------------
+     Create Firebase Auth account
+     ----------------------------------------- */
+
+  const credential =
+    await auth.createUserWithEmailAndPassword(
+      email.trim(),
+      password
+    );
+
+  const user = credential.user;
+
+  if (!user) {
+    throw new Error(
+      "registration-user-missing"
+    );
+  }
+
+  const uid = user.uid;
+
+
+  try {
+
+    /* ---------------------------------------
+       Create Firestore profile
+       --------------------------------------- */
+
+    await db
+      .collection(
+        COLLECTIONS.USERS || "users"
       )
-    ) {
+      .doc(uid)
+      .set({
 
-      redirectIfAlreadyLoggedIn();
+        uid,
+
+        name: fullName.trim(),
+
+        email: email.trim(),
+
+        batch: batch
+          ? String(batch).trim()
+          : "",
+
+        cohort: batch
+          ? String(batch).trim()
+          : "",
+
+        role: ROLES.MEMBER,
+
+        status: STATUSES.ACTIVE,
+
+        createdAt:
+          firebase.firestore.FieldValue
+            .serverTimestamp()
+      });
+
+
+    clearProfileCache();
+
+    return user;
+
+
+  } catch (error) {
+
+    console.error(
+      "[CESS Auth] Failed to create Firestore profile:",
+      error
+    );
+
+
+    /* ---------------------------------------
+       Roll back Auth account
+       --------------------------------------- */
+
+    try {
+
+      await user.delete();
+
+    } catch (rollbackError) {
+
+      console.error(
+        "[CESS Auth] Failed to roll back Auth account:",
+        rollbackError
+      );
+    }
+
+
+    throw error;
+  }
+}
+
+
+/* =========================================================
+   LOGIN
+   ========================================================= */
+
+async function loginUser(email, password) {
+
+  const normalizedEmail =
+    String(email || "").trim();
+
+
+  if (!normalizedEmail || !password) {
+
+    throw new Error(
+      "missing-login-fields"
+    );
+  }
+
+
+  /* -----------------------------------------
+     Firebase Authentication
+     ----------------------------------------- */
+
+  await auth.signInWithEmailAndPassword(
+    normalizedEmail,
+    password
+  );
+
+
+  clearProfileCache();
+
+
+  /* -----------------------------------------
+     Firestore profile
+     ----------------------------------------- */
+
+  const profile =
+    await getCurrentUserProfile(true);
+
+
+  if (!profile) {
+
+    await auth.signOut();
+
+    clearProfileCache();
+
+    throw new Error(
+      "missing-profile"
+    );
+  }
+
+
+  /* -----------------------------------------
+     Account status
+     ----------------------------------------- */
+
+  if (
+    profile.status === STATUSES.SUSPENDED
+  ) {
+
+    await auth.signOut();
+
+    clearProfileCache();
+
+    throw new Error(
+      "suspended"
+    );
+  }
+
+
+  if (
+    profile.status === STATUSES.INACTIVE
+  ) {
+
+    await auth.signOut();
+
+    clearProfileCache();
+
+    throw new Error(
+      "inactive"
+    );
+  }
+
+
+  /* -----------------------------------------
+     Role validation
+     ----------------------------------------- */
+
+  const validRoles = [
+    ROLES.MEMBER,
+    ROLES.LEADERSHIP,
+    ROLES.ADMIN
+  ];
+
+
+  if (!validRoles.includes(profile.role)) {
+
+    await auth.signOut();
+
+    clearProfileCache();
+
+    throw new Error(
+      "invalid-role"
+    );
+  }
+
+
+  /* -----------------------------------------
+     Redirect
+     ----------------------------------------- */
+
+  redirectToRoleHome(
+    profile.role
+  );
+}
+
+
+/* =========================================================
+   LOGOUT
+   ========================================================= */
+
+async function logoutUser() {
+
+  try {
+
+    await auth.signOut();
+
+  } catch (error) {
+
+    console.error(
+      "[CESS Auth] Logout failed:",
+      error
+    );
+
+    throw error;
+
+  } finally {
+
+    clearProfileCache();
+
+    window.location.replace(
+      "index.html"
+    );
+  }
+}
+
+
+/* =========================================================
+   PASSWORD RESET
+   ========================================================= */
+
+async function sendPasswordReset(email) {
+
+  const normalizedEmail =
+    String(email || "").trim();
+
+  if (!normalizedEmail) {
+
+    throw new Error(
+      "missing-email"
+    );
+  }
+
+  await auth.sendPasswordResetEmail(
+    normalizedEmail
+  );
+}
+
+
+/* =========================================================
+   PAGE GUARD
+   ========================================================= */
+
+/**
+ * Protect a page by role and account status.
+ *
+ * Example:
+ *
+ * guardPage(
+ *   [ROLES.ADMIN],
+ *   async (profile) => {
+ *     // authorized
+ *   }
+ * );
+ */
+async function guardPage(
+  allowedRoles = [],
+  onAuthorized = null
+) {
+
+  /* -----------------------------------------
+     Wait for Firebase Auth
+     ----------------------------------------- */
+
+  await ready();
+
+
+  const user =
+    auth.currentUser;
+
+
+  /* -----------------------------------------
+     Not authenticated
+     ----------------------------------------- */
+
+  if (!user) {
+
+    window.location.replace(
+      "login.html"
+    );
+
+    return;
+  }
+
+
+  /* -----------------------------------------
+     Load Firestore profile
+     ----------------------------------------- */
+
+  const profile =
+    await getCurrentUserProfile(true);
+
+
+  if (!profile) {
+
+    await auth.signOut();
+
+    clearProfileCache();
+
+    window.location.replace(
+      "login.html"
+    );
+
+    return;
+  }
+
+
+  /* -----------------------------------------
+     Suspended
+     ----------------------------------------- */
+
+  if (
+    profile.status ===
+    STATUSES.SUSPENDED
+  ) {
+
+    await auth.signOut();
+
+    clearProfileCache();
+
+    showAuthMessage(
+      "auth.suspended",
+      "Account suspended."
+    );
+
+    window.location.replace(
+      "login.html"
+    );
+
+    return;
+  }
+
+
+  /* -----------------------------------------
+     Inactive
+     ----------------------------------------- */
+
+  if (
+    profile.status ===
+    STATUSES.INACTIVE
+  ) {
+
+    await auth.signOut();
+
+    clearProfileCache();
+
+    showAuthMessage(
+      "auth.inactive",
+      "Your account is inactive."
+    );
+
+    window.location.replace(
+      "login.html"
+    );
+
+    return;
+  }
+
+
+  /* -----------------------------------------
+     Validate role
+     ----------------------------------------- */
+
+  if (
+    !Array.isArray(allowedRoles)
+    || !allowedRoles.includes(
+      profile.role
+    )
+  ) {
+
+    redirectToRoleHome(
+      profile.role
+    );
+
+    return;
+  }
+
+
+  /* -----------------------------------------
+     Authorized
+     ----------------------------------------- */
+
+  if (
+    typeof onAuthorized === "function"
+  ) {
+
+    try {
+
+      await onAuthorized(
+        profile
+      );
+
+    } catch (error) {
+
+      console.error(
+        "[CESS Auth] Authorized callback failed:",
+        error
+      );
+
+      throw error;
     }
   }
-);
+}
+
+
+/* =========================================================
+   AUTH MESSAGE
+   ========================================================= */
+
+function showAuthMessage(
+  translationKey,
+  fallback
+) {
+
+  try {
+
+    const translate =
+      window.t ||
+      ((key) => key);
+
+    const message =
+      translate(translationKey);
+
+    if (
+      typeof window.toastError ===
+      "function"
+    ) {
+
+      window.toastError(
+        message !== translationKey
+          ? message
+          : fallback
+      );
+    }
+
+  } catch (error) {
+
+    console.warn(
+      "[CESS Auth] Could not show auth message:",
+      error
+    );
+  }
+}
+
+
+/* =========================================================
+   FRIENDLY AUTH ERRORS
+   ========================================================= */
+
+function friendlyAuthError(error) {
+
+  const translate =
+    window.t ||
+    ((key) => key);
+
+
+  if (!error) {
+
+    return translate(
+      "auth.err.generic"
+    );
+  }
+
+
+  /* -----------------------------------------
+     Custom CESS errors
+     ----------------------------------------- */
+
+  const customErrors = {
+
+    "suspended":
+      "auth.suspended",
+
+    "inactive":
+      "auth.inactive",
+
+    "missing-profile":
+      "auth.err.userNotFound",
+
+    "invalid-role":
+      "auth.err.generic",
+
+    "missing-login-fields":
+      "auth.err.generic",
+
+    "missing-registration-fields":
+      "auth.err.generic"
+  };
+
+
+  if (
+    customErrors[error.message]
+  ) {
+
+    return translate(
+      customErrors[
+        error.message
+      ]
+    );
+  }
+
+
+  /* -----------------------------------------
+     Firebase Auth errors
+     ----------------------------------------- */
+
+  const firebaseErrors = {
+
+    "auth/email-already-in-use":
+      "auth.err.emailInUse",
+
+    "auth/invalid-email":
+      "auth.err.invalidEmail",
+
+    "auth/weak-password":
+      "auth.err.weakPassword",
+
+    "auth/user-not-found":
+      "auth.err.userNotFound",
+
+    "auth/wrong-password":
+      "auth.err.wrongPassword",
+
+    "auth/invalid-credential":
+      "auth.err.wrongPassword",
+
+    "auth/too-many-requests":
+      "auth.err.tooMany"
+  };
+
+
+  const key =
+    firebaseErrors[
+      error.code
+    ];
+
+
+  if (key) {
+
+    return translate(key);
+  }
+
+
+  return (
+    error.message ||
+    translate("auth.err.generic")
+  );
+}
+
+
+/* =========================================================
+   PUBLIC API
+   ========================================================= */
+
+export {
+
+  getCurrentUserProfile,
+
+  redirectToRoleHome,
+
+  loginUser,
+
+  registerUser,
+
+  logoutUser,
+
+  sendPasswordReset,
+
+  guardPage,
+
+  friendlyAuthError,
+
+  getLoggedInUser,
+
+  clearProfileCache,
+
+  ready,
+
+  showAuthMessage,
+
+  ROLES,
+
+  STATUSES,
+
+  COLLECTIONS
+};
+
+
+/* =========================================================
+   GLOBAL COMPATIBILITY
+   =========================================================
+
+   Keep these because some existing CESS pages may still
+   access the authentication functions through window.
+   ========================================================= */
+
+window.CESS_AUTH = {
+
+  getCurrentUserProfile,
+
+  redirectToRoleHome,
+
+  loginUser,
+
+  registerUser,
+
+  logoutUser,
+
+  sendPasswordReset,
+
+  guardPage,
+
+  friendlyAuthError,
+
+  getLoggedInUser,
+
+  clearProfileCache,
+
+  ready,
+
+  showAuthMessage,
+
+  ROLES,
+
+  STATUSES,
+
+  COLLECTIONS
+};
+
+
+/* Legacy globals */
+
+window.getCurrentUserProfile =
+  getCurrentUserProfile;
+
+window.redirectToRoleHome =
+  redirectToRoleHome;
+
+window.loginUser =
+  loginUser;
+
+window.registerUser =
+  registerUser;
+
+window.logoutUser =
+  logoutUser;
+
+window.sendPasswordReset =
+  sendPasswordReset;
+
+window.guardPage =
+  guardPage;
+
+window.friendlyAuthError =
+  friendlyAuthError;
+
+window.getLoggedInUser =
+  getLoggedInUser;
+
+window.clearProfileCache =
+  clearProfileCache;
+
+window.authReady =
+  ready;
