@@ -7,7 +7,7 @@
 
    INSTRUCTIONS:
    1. Go to https://console.firebase.google.com
-   2. Create a project (Spark / free plan is enough).
+   2. Create a Firebase project (Spark / free plan is enough).
    3. Add a Web App inside that project.
    4. Copy the config object Firebase gives you into firebaseConfig below.
    5. Enable "Email/Password" under Authentication > Sign-in method.
@@ -21,6 +21,7 @@
    ========================================================= */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+
 import {
   getAuth,
   onAuthStateChanged,
@@ -29,6 +30,7 @@ import {
   signOut,
   sendPasswordResetEmail
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
 import {
   getFirestore,
   collection,
@@ -46,27 +48,47 @@ import {
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+
+/* =========================================================
+   Firebase Configuration
+   CESS — The Technological University
+   ========================================================= */
+
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyDN_7TRb-qeWKnc8Tvabfv6Ry_DHe3Ks",
+  authDomain: "cess-website.firebaseapp.com",
+  projectId: "cess-website",
+  storageBucket: "cess-website.firebasestorage.app",
+  messagingSenderId: "692636042706",
+  appId: "1:692636042706:web:50cdd4cebd0e66426fb40b",
+  measurementId: "G-3RFMM5CLEW"
 };
 
+
+/* =========================================================
+   Initialize Firebase
+   ========================================================= */
+
 const app = initializeApp(firebaseConfig);
+
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
-// Re-export the modular functions so every other file imports
-// them from this one place — no page re-imports the CDN URL directly.
+
+/* =========================================================
+   Re-export Firebase functions
+   =========================================================
+   Every other module imports Firebase functions from this file.
+   No page re-imports the Firebase CDN URLs directly.
+   ========================================================= */
+
 export {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
   sendPasswordResetEmail,
+
   collection,
   doc,
   getDoc,
@@ -75,6 +97,7 @@ export {
   setDoc,
   updateDoc,
   deleteDoc,
+
   query,
   where,
   orderBy,
@@ -82,37 +105,122 @@ export {
   serverTimestamp
 };
 
+
 /* =========================================================
-   Centralized constants — change once, applies everywhere
+   Centralized CESS Configuration
    ========================================================= */
+
 export const CESS_CONFIG = {
-  logoPath: "assets/cess-logo.png", // Replace this file later; every page references this constant
+
+  /* ---------------------------------------------------------
+     General
+     --------------------------------------------------------- */
+
+  logoPath: "assets/cess-logo.png",
+
   contactEmail: "cess.civil.engineering@gmail.com",
+
+
+  /* ---------------------------------------------------------
+     User Roles
+     --------------------------------------------------------- */
+
   roles: {
     MEMBER: "member",
     LEADERSHIP: "leadership",
     ADMIN: "admin"
   },
+
+
+  /* ---------------------------------------------------------
+     User Statuses
+     --------------------------------------------------------- */
+
   statuses: {
     ACTIVE: "active",
     INACTIVE: "inactive",
     SUSPENDED: "suspended"
   },
+
+
+  /* ---------------------------------------------------------
+     Firestore Collections
+     --------------------------------------------------------- */
+
   collections: {
+
     USERS: "users",
+
     ACTIVITIES: "activities",
+
     ANNOUNCEMENTS: "announcements",
+
     RESOURCES: "resources",
+
     HISTORY: "history",
+
     PUBLIC_ARCHIVE: "publicArchive",
+
     MEETINGS: "meetings",
+
     REPORTS: "reports",
+
     COMMITTEES: "committees",
+
     INTERNAL_DOCUMENTS: "internalDocuments",
+
     HANDOVER: "handover",
+
     SETTINGS: "settings"
   },
-  activityCategories: ["workshop", "lecture", "competition", "volunteering", "meeting", "social", "training", "campaign", "other"],
-  resourceCategories: ["lecture", "book", "course", "software", "engineering", "academic", "career", "other"],
-  handoverCategories: ["finance", "media", "membership", "activities", "administration", "documents", "accounts", "other"]
+
+
+  /* ---------------------------------------------------------
+     Activity Categories
+     --------------------------------------------------------- */
+
+  activityCategories: [
+    "workshop",
+    "lecture",
+    "competition",
+    "volunteering",
+    "meeting",
+    "social",
+    "training",
+    "campaign",
+    "other"
+  ],
+
+
+  /* ---------------------------------------------------------
+     Resource Categories
+     --------------------------------------------------------- */
+
+  resourceCategories: [
+    "lecture",
+    "book",
+    "course",
+    "software",
+    "engineering",
+    "academic",
+    "career",
+    "other"
+  ],
+
+
+  /* ---------------------------------------------------------
+     Handover Categories
+     --------------------------------------------------------- */
+
+  handoverCategories: [
+    "finance",
+    "media",
+    "membership",
+    "activities",
+    "administration",
+    "documents",
+    "accounts",
+    "other"
+  ]
+
 };
